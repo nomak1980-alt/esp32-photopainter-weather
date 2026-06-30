@@ -38,6 +38,9 @@ static void maybeNtp(struct tm& now) {
 }
 
 static void sleepFor(uint32_t sec) {
+#ifdef DEBUG_SLEEP_S
+  sec = DEBUG_SLEEP_S;   // Debug: kurzer Zyklus
+#endif
   esp_sleep_enable_timer_wakeup((uint64_t)sec * 1000000ULL);
   esp_deep_sleep_start();
 }
