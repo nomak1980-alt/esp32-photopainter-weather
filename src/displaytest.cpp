@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <cstring>
 #include "display_view.h"
+#include "local_sensors.h"
 #include "config.h"
 
 static SensorReading mk(const char* id, float t, int h, int b, bool v) {
@@ -14,6 +15,7 @@ void setup() {
   Serial.begin(115200);
   delay(1500);
   Serial.println("display test start");
+  localInit();        // aktiviert ALDO-Schienen (E-Paper-Strom)
   displayInit();
   SensorReading demo[4] = {
     mk("a", 21.4f, 65, 88, true),

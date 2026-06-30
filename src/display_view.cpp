@@ -7,6 +7,7 @@
 #include "config.h"
 #include "view_model.h"
 #include "forecast.h"
+#include "weather_icons.h"
 #include <math.h>
 
 static GxEPD2_7C<GxEPD2_730c_GDEP073E01, GxEPD2_730c_GDEP073E01::HEIGHT> display(
@@ -98,38 +99,23 @@ static void drawTile(int x, int y, int w, int h, const char* name, const SensorR
 // ---------- Wetter-Icons (mit GFX-Primitiven, 6 Farben) ----------
 static const char* WDAY_DE[7] = {"So","Mo","Di","Mi","Do","Fr","Sa"};
 
-static void icSun(int cx, int cy, int r) {
-  display.fillCircle(cx, cy, r, GxEPD_YELLOW);
-  for (int a = 0; a < 360; a += 45) {
-    float rad = a * 3.14159f / 180.0f;
-    display.drawLine(cx + cosf(rad) * (r + 2), cy + sinf(rad) * (r + 2),
-                     cx + cosf(rad) * (r + 5), cy + sinf(rad) * (r + 5), GxEPD_RED);
+static uint16_t iconColor(unsigned char c) {
+  switch (c) {
+    case 1: return GxEPD_RED;
+    case 2: return GxEPD_YELLOW;
+    case 3: return GxEPD_BLUE;
+    case 4: return GxEPD_GREEN;
+    case 5: return GxEPD_WHITE;
+    default: return GxEPD_BLACK;
   }
 }
-static void icCloud(int cx, int cy, uint16_t col) {
-  display.fillCircle(cx - 8, cy + 3, 7, col);
-  display.fillCircle(cx + 8, cy + 3, 8, col);
-  display.fillCircle(cx - 1, cy - 3, 9, col);
-  display.fillRect(cx - 14, cy + 3, 30, 8, col);
-}
-static void icRainDrops(int cx, int cy, uint16_t col) {
-  for (int i = -1; i <= 1; i++)
-    display.drawLine(cx + i * 8, cy, cx + i * 8 - 2, cy + 7, col);
-}
+// Wetter-Icon aus 1-Bit-Farbebenen (weather_icons.h) zeichnen
 static void drawWeatherIcon(int cx, int cy, WIcon ic) {
-  switch (ic) {
-    case ICON_SUN:    icSun(cx, cy, 11); break;
-    case ICON_PARTLY: icSun(cx - 7, cy - 6, 7); icCloud(cx + 4, cy + 3, GxEPD_BLACK); break;
-    case ICON_CLOUD:  icCloud(cx, cy, GxEPD_BLACK); break;
-    case ICON_RAIN:   icCloud(cx, cy - 4, GxEPD_BLACK); icRainDrops(cx, cy + 11, GxEPD_BLUE); break;
-    case ICON_SNOW:   icCloud(cx, cy - 4, GxEPD_BLACK);
-                      for (int i = -1; i <= 1; i++) display.fillCircle(cx + i * 8, cy + 12, 2, GxEPD_BLUE);
-                      break;
-    case ICON_STORM:  icCloud(cx, cy - 4, GxEPD_BLACK);
-                      display.fillTriangle(cx - 2, cy + 4, cx + 5, cy + 4, cx - 1, cy + 12, GxEPD_YELLOW);
-                      display.fillTriangle(cx + 1, cy + 9, cx + 6, cy + 9, cx - 2, cy + 18, GxEPD_YELLOW);
-                      break;
-  }
+  int idx = (int)ic;
+  const WLayer* layers = IC_LAYERS[idx];
+  for (int i = 0; i < IC_NLAYERS[idx]; i++)
+    display.drawBitmap(cx - WICON_W / 2, cy - WICON_H / 2,
+                       layers[i].bmp, WICON_W, WICON_H, iconColor(layers[i].color));
 }
 
 static void drawForecastBar(int y0, const DayForecast* fc, int count) {
