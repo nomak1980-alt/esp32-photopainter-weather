@@ -139,10 +139,10 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
     const char* wd = WDAY_DE[fc[i].wday % 7];
     int16_t bx, by; uint16_t bw, bh;
     display.getTextBounds(wd, 0, 0, &bx, &by, &bw, &bh);
-    display.setCursor(cx - bw / 2, y0 + 24);
+    display.setCursor(i * colW + 8, y0 + 22);   // linksbuendig
     display.print(wd);
-    // Icon
-    drawWeatherIcon(cx, y0 + 50, wmoToIcon(fc[i].wmoCode));
+    // Icon (groesser, nach rechts/oben gerueckt)
+    drawWeatherIcon(cx + 16, y0 + 46, wmoToIcon(fc[i].wmoCode));
     // Temperaturen Max (schwarz) / Min (blau), je mit kleinem Gradring
     char hs[8], ls[8], full[20];
     snprintf(hs, sizeof hs, "%d", fc[i].tMax);
@@ -152,15 +152,15 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
     display.getTextBounds(full, 0, 0, &bx, &by, &bw, &bh);
     int tx = cx - bw / 2;
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(tx, y0 + 86);
+    display.setCursor(tx, y0 + 90);
     display.print(hs);
     int dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 74, 2, GxEPD_BLACK);   // Gradring Max
-    display.setCursor(dx + 9, y0 + 86);
+    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLACK);   // Gradring Max
+    display.setCursor(dx + 9, y0 + 90);
     display.setTextColor(GxEPD_BLUE);
     display.print(ls);
     dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 74, 2, GxEPD_BLUE);    // Gradring Min
+    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLUE);    // Gradring Min
   }
 }
 

@@ -2,12 +2,36 @@
 # Konvertiert die ausgeschnittenen Wetter-Icons (icons_src/cut/*.png) in
 # weather_icons.h: pro Pixel ein 6-Farben-Palettenindex (4 Bit, 2 px/Byte),
 # Quantisierung "nearest" (kein Dither -> knackig). Plus Vorschau-PNG.
-from PIL import Image
+from PIL import Image, ImageFilter, ImageChops
 import os
+
+# Kontur um ganze Silhouette (Sonne) bzw. nur um die Sonnenflaeche (partly)
+OUTLINE_ALPHA = {"sun"}
+OUTLINE_SUN   = {"partly"}
+
+def sun_color_mask(rgba):
+    px = rgba.load(); w, h = rgba.size
+    m = Image.new("L", (w, h), 0); mp = m.load()
+    for y in range(h):
+        for x in range(w):
+            R, G, B, A = px[x, y]
+            if A > 40 and R > 140 and G > 90 and B < 140 and R >= G - 10:
+                mp[x, y] = 255
+    return m
+
+def add_outline(rgba, width=1, mask=None):
+    if mask is None:
+        mask = rgba.split()[3].point(lambda v: 255 if v > 40 else 0)
+    dil = mask.filter(ImageFilter.MaxFilter(width * 2 + 1))
+    ring = ImageChops.subtract(dil, mask)
+    out = rgba.copy()
+    black = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
+    out.paste(black, (0, 0), ring)
+    return out
 CUT = "C:/Entwicklung/ESP32Wetter/icons_src/cut"
 OUT_H = "C:/Entwicklung/ESP32Wetter/src/weather_icons.h"
 names = ["sun","partly","cloud","rain","snow","storm"]   # = WIcon enum 0..5
-SIZE = 46
+SIZE = 64
 
 # Panel-Palette (Index 0..5). Farbcode-Mapping fuer GxEPD in C:
 #   0=BLACK 1=WHITE 2=RED 3=YELLOW 4=BLUE 5=GREEN
@@ -19,9 +43,13 @@ flat += [0,0,0]*(256-len(PAL))
 palimg.putpalette(flat)
 
 def quant_indices(name):
-    ic = Image.open(f"{CUT}/{name}.png").convert("RGBA")
+    ic = Image.open(f"{CUT}/{name}.png").convert("RGBA").resize((SIZE,SIZE), Image.LANCZOS)
+    if name in OUTLINE_ALPHA:
+        ic = add_outline(ic, 1)
+    elif name in OUTLINE_SUN:
+        ic = add_outline(ic, 1, mask=sun_color_mask(ic))
     bg = Image.new("RGBA",(SIZE,SIZE),(255,255,255,255))
-    bg.alpha_composite(ic.resize((SIZE,SIZE), Image.LANCZOS))
+    bg.alpha_composite(ic)
     q = bg.convert("RGB").quantize(palette=palimg, dither=0)
     return q  # mode P, Werte 0..5
 
