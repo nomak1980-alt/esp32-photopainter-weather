@@ -1,0 +1,7 @@
+{
+  "name": "wetter-logic",
+  "version": "1.0.0",
+  "build": {
+    "srcFilter": "+<*.cpp>"
+  }
+}
