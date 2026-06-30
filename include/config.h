@@ -12,10 +12,11 @@
 #define PCF85063_I2C_ADDR  0x51
 #define PMIC_I2C_ADDR      0x34   // AXP2101 (bestaetigt) -> XPowersLib
 
-// --- E-Paper SPI (wird in Task 3 aus Repo/Schaltplan bestaetigt) ---
-// #define EPD_CS_PIN   <pin>
-// #define EPD_DC_PIN   <pin>
-// #define EPD_RST_PIN  <pin>
-// #define EPD_BUSY_PIN <pin>
-// #define EPD_SCK_PIN  <pin>
-// #define EPD_MOSI_PIN <pin>
+// --- E-Paper SPI (bestaetigt aus Repo user_app.cpp in Task 3) ---
+//   ePaperPort(dither, mosi=11, scl=10, dc=8, cs=9, rst=12, busy=13, 800,480,...)
+#define EPD_MOSI_PIN 11
+#define EPD_SCK_PIN  10
+#define EPD_DC_PIN   8
+#define EPD_CS_PIN   9
+#define EPD_RST_PIN  12
+#define EPD_BUSY_PIN 13
