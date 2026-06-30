@@ -65,10 +65,10 @@ immer-online **Hub 3** hat alle Sensoren bereits zuverlässig eingebunden.
 
 | Anzeigename   | MAC               | Position |
 |---------------|-------------------|----------|
-| Außen Hinten  | EC:2E:85:06:68:71 | außen    |
-| Außen Vorne   | EC:2E:84:86:41:0D | außen    |
-| Büro          | ED:2E:86:06:66:8D | innen    |
-| Küche         | B0:E9:FE:F1:FB:2A | innen    |
+| Außen Hinten  | AA:AA:AA:AA:AA:AA | außen    |
+| Außen Vorne   | BB:BB:BB:BB:BB:BB | außen    |
+| Büro          | CC:CC:CC:CC:CC:CC | innen    |
+| Küche         | DD:DD:DD:DD:DD:DD | innen    |
 
 ## Betrieb & Stromsparen
 

@@ -15,10 +15,10 @@
 - **Display:** 7,3" Spectra-6 / E6, 800×480, 6 Farben. GxEPD2-Klasse `GxEPD2_730c_GDEP073E01`. **Nur Vollbild-Refresh** (kein Partial). Farbkonstanten: `GxEPD_BLACK, GxEPD_WHITE, GxEPD_RED, GxEPD_YELLOW, GxEPD_BLUE, GxEPD_GREEN`.
 - **Geheimnisse:** WLAN-Passwort, SwitchBot-Token + Secret stehen NUR in `include/secrets.h`. Diese Datei ist in `.gitignore`; eingecheckt wird nur `include/secrets.example.h`.
 - **Sensoren-Mapping (deviceId = MAC ohne Doppelpunkte, Großbuchstaben):**
-  - „Außen Hinten" = `EC2E85066871`
-  - „Außen Vorne" = `EC2E8486410D`
-  - „Büro" = `ED2E8606668D`
-  - „Küche" = `B0E9FEF1FB2A`
+  - „Außen Hinten" = `AAAAAAAAAAAA`
+  - „Außen Vorne" = `BBBBBBBBBBBB`
+  - „Büro" = `CCCCCCCCCCCC`
+  - „Küche" = `DDDDDDDDDDDD`
 - **SwitchBot API:** Base-URL `https://api.switch-bot.com`, Status-Endpoint `/v1.1/devices/{deviceId}/status`. Header: `Authorization: <token>`, `sign: <Base64(HMAC_SHA256(secret, token + t + nonce))>` (sign als UPPERCASE-Hex? NEIN — Base64), `t: <ms-Epoch>`, `nonce: <uuid/zufall>`, `Content-Type: application/json; charset=utf8`.
 - **Temp-Farblogik:** `< 10 °C` blau, `10–25 °C` grün, `> 25 °C` rot. **Sensor-Batterie < 20 %** → rote Zahl.
 - **Wakeup:** Tag (05:00–23:59) alle 10 min, Nacht (00:00–04:59) alle 30 min. Refresh nur bei Änderung von Temp/Feuchte/Batterie eines beliebigen Werts.
@@ -803,7 +803,7 @@ git commit -m "feat: SwitchBot API Parsing (Host-Test) + HTTPS fetchAll"
 // --- Sensoren ---
 #define DEVICE_COUNT 4
 static const char* const DEVICE_IDS[DEVICE_COUNT] =
-  {"EC2E85066871","EC2E8486410D","ED2E8606668D","B0E9FEF1FB2A"};
+  {"AAAAAAAAAAAA","BBBBBBBBBBBB","CCCCCCCCCCCC","DDDDDDDDDDDD"};
 static const char* const DEVICE_NAMES[DEVICE_COUNT] =
   {"Außen Hinten","Außen Vorne","Büro","Küche"};
 static const bool DEVICE_OUTDOOR[DEVICE_COUNT] = {true,true,false,false};
