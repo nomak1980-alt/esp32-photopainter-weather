@@ -20,3 +20,12 @@
 #define EPD_CS_PIN   9
 #define EPD_RST_PIN  12
 #define EPD_BUSY_PIN 13
+
+// --- Sensoren (deviceId = MAC ohne Doppelpunkte, Grossbuchstaben) ---
+#define DEVICE_COUNT 4
+static const char* const DEVICE_IDS[DEVICE_COUNT] =
+  {"EC2E85066871","EC2E8486410D","ED2E8606668D","B0E9FEF1FB2A"};
+// Anzeigenamen ASCII-sicher (Adafruit-GFX-Standardfonts ohne Umlaute):
+static const char* const DEVICE_NAMES[DEVICE_COUNT] =
+  {"Aussen Hinten","Aussen Vorne","Buero","Kueche"};
+static const bool DEVICE_OUTDOOR[DEVICE_COUNT] = {true,true,false,false};
