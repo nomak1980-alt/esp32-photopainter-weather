@@ -1,0 +1,4 @@
+.pio/
+reference/
+include/secrets.h
+.superpowers/
