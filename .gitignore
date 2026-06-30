@@ -2,3 +2,7 @@
 reference/
 include/secrets.h
 .superpowers/
+
+# temporaere Icon-Vorschauen
+icons_src/cut/_*.png
+icons_src/_*.png

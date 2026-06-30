@@ -99,23 +99,30 @@ static void drawTile(int x, int y, int w, int h, const char* name, const SensorR
 // ---------- Wetter-Icons (mit GFX-Primitiven, 6 Farben) ----------
 static const char* WDAY_DE[7] = {"So","Mo","Di","Mi","Do","Fr","Sa"};
 
-static uint16_t iconColor(unsigned char c) {
-  switch (c) {
-    case 1: return GxEPD_RED;
-    case 2: return GxEPD_YELLOW;
-    case 3: return GxEPD_BLUE;
-    case 4: return GxEPD_GREEN;
-    case 5: return GxEPD_WHITE;
-    default: return GxEPD_BLACK;
+// Palettenindex 0..5 -> GxEPD-Farbe (siehe weather_icons.h)
+static uint16_t iconColor(unsigned char idx) {
+  switch (idx) {
+    case 0: return GxEPD_BLACK;
+    case 1: return GxEPD_WHITE;
+    case 2: return GxEPD_RED;
+    case 3: return GxEPD_YELLOW;
+    case 4: return GxEPD_BLUE;
+    case 5: return GxEPD_GREEN;
+    default: return GxEPD_WHITE;
   }
 }
-// Wetter-Icon aus 1-Bit-Farbebenen (weather_icons.h) zeichnen
+// Wetter-Icon (gedithertes 6-Farben-Bitmap, 4 Bit/Pixel) pixelweise zeichnen.
+// Weiss (Index 1) = transparent (Papierhintergrund).
 static void drawWeatherIcon(int cx, int cy, WIcon ic) {
-  int idx = (int)ic;
-  const WLayer* layers = IC_LAYERS[idx];
-  for (int i = 0; i < IC_NLAYERS[idx]; i++)
-    display.drawBitmap(cx - WICON_W / 2, cy - WICON_H / 2,
-                       layers[i].bmp, WICON_W, WICON_H, iconColor(layers[i].color));
+  const unsigned char* d = WICON_DATA[(int)ic];
+  int x0 = cx - WICON_W / 2, y0 = cy - WICON_H / 2;
+  int total = WICON_W * WICON_H;
+  for (int p = 0; p < total; p++) {
+    unsigned char byte = d[p >> 1];
+    unsigned char idx = (p & 1) ? (byte & 0x0F) : (byte >> 4);
+    if (idx == 1) continue;
+    display.drawPixel(x0 + (p % WICON_W), y0 + (p / WICON_W), iconColor(idx));
+  }
 }
 
 static void drawForecastBar(int y0, const DayForecast* fc, int count) {
