@@ -29,3 +29,9 @@ static const char* const DEVICE_IDS[DEVICE_COUNT] =
 static const char* const DEVICE_NAMES[DEVICE_COUNT] =
   {"Aussen Hinten","Aussen Vorne","Buero","Kueche"};
 static const bool DEVICE_OUTDOOR[DEVICE_COUNT] = {true,true,false,false};
+
+// --- Wettervorhersage (Open-Meteo, Ziersdorf NÖ) ---
+#define FORECAST_DAYS 7
+#define FORECAST_LAT  "48.5333"
+#define FORECAST_LON  "15.9167"
+#define FORECAST_TZ   "Europe/Vienna"

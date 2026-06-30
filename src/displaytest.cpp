@@ -22,7 +22,16 @@ void setup() {
     mk("d",  0,     0, -1, false),  // keine Daten
   };
   HeaderInfo h{22.8f, 50, 84, true, 14, 30, true};
-  displayRender(demo, 4, h);
+  // Demo-Vorhersage 7 Tage (Codes: 0 klar,2 heiter,3 bewoelkt,61 Regen,95 Gewitter,75 Schnee)
+  int codes[7] = {0, 2, 3, 61, 95, 75, 1};
+  int tmax[7]  = {34, 30, 27, 26, 27, 26, 29};
+  int tmin[7]  = {21, 17, 18, 14, 14, 17, 18};
+  DayForecast fc[7];
+  for (int i = 0; i < 7; i++) {
+    fc[i].wmoCode = codes[i]; fc[i].tMax = tmax[i]; fc[i].tMin = tmin[i];
+    fc[i].wday = (2 + i) % 7; fc[i].valid = true;   // ab Dienstag
+  }
+  displayRender(demo, 4, h, fc, 7);
   Serial.println("display test done");
 }
 
