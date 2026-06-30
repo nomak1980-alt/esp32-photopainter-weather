@@ -13,6 +13,12 @@ void localInit() {
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   shtc3.begin(&Wire);
   pmu.begin(Wire, PMIC_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN);
+  // Versorgungsschienen wie Werksfirmware aktivieren (E-Paper haengt an einer ALDO).
+  pmu.setALDO1Voltage(3300); pmu.enableALDO1();
+  pmu.setALDO2Voltage(3300); pmu.enableALDO2();
+  pmu.setALDO3Voltage(3300); pmu.enableALDO3();
+  pmu.setALDO4Voltage(3300); pmu.enableALDO4();
+  delay(50);
 }
 
 bool readSHTC3(float& t, int& h) {

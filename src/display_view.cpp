@@ -21,10 +21,23 @@ static uint16_t toGx(Col c) {
   }
 }
 
+// GxEPD2 nimmt fuer dieses Panel die falsche BUSY-Polaritaet an.
+// Waveshare-Treiber: Panel ist FERTIG wenn BUSY=HIGH, BUSY (beschaeftigt) wenn LOW.
+// Diese Routine wartet korrekt, solange BUSY LOW ist (max. 30 s).
+static void epdBusyWait(const void*) {
+  delay(20);                       // BUSY-Pegel setzen lassen
+  uint32_t t0 = millis();
+  while (digitalRead(EPD_BUSY_PIN) == LOW) {
+    if (millis() - t0 > 30000) break;
+    delay(10);
+  }
+}
+
 void displayInit() {
   SPI.begin(EPD_SCK_PIN, -1, EPD_MOSI_PIN, EPD_CS_PIN);
   display.init(115200);
   display.setRotation(2);   // 180 gedreht (Montage-Ausrichtung)
+  display.epd2.setBusyCallback(epdBusyWait);
 }
 
 // Zeichnet "<num>°C" mit echtem Gradring (Fonts haben kein 0xB0).
