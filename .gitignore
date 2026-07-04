@@ -7,3 +7,4 @@ include/secrets.h
 icons_src/cut/_*.png
 icons_src/_*.png
 include/user_config.h
+tools/wetter_config.json
