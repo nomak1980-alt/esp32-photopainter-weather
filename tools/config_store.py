@@ -100,6 +100,7 @@ def load(json_path=None, user_config_path=None, secrets_path=None):
     json_path = Path(json_path or JSON_PATH)
     if json_path.exists():
         cfg = dict(DEFAULTS)
+        cfg["devices"] = list(DEFAULTS["devices"])
         cfg.update(json.loads(json_path.read_text(encoding="utf-8")))
         return cfg
     return _parse_headers(Path(user_config_path or USER_CONFIG_H),

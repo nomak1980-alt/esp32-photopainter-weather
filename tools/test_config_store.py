@@ -90,6 +90,29 @@ class TestConfigStore(unittest.TestCase):
             self.assertEqual(cfg["display_mode"], 0)
             self.assertEqual(cfg["devices"], [])
 
+    def test_load_json_without_devices_creates_independent_list(self):
+        """Regression test: devices list must be deep-copied, not shared with DEFAULTS."""
+        with tempfile.TemporaryDirectory() as td:
+            jp = Path(td) / "cfg.json"
+            # JSON without "devices" key — should not share list with DEFAULTS
+            jp.write_text(
+                '{"header_title": "Test", "display_mode": 1, "wifi_ssid": "W"}',
+                encoding="utf-8")
+            cfg = cs.load(json_path=jp,
+                          user_config_path=Path(td) / "y.h",
+                          secrets_path=Path(td) / "z.h")
+            # Mutate loaded cfg's devices list
+            cfg["devices"].append({"id": "TEST", "name": "Test", "outdoor": False, "selected": True})
+            # DEFAULTS["devices"] must still be empty (not corrupted)
+            self.assertEqual(cs.DEFAULTS["devices"], [])
+            # Two independent loads must get independent lists
+            cfg2 = cs.load(json_path=jp,
+                           user_config_path=Path(td) / "y.h",
+                           secrets_path=Path(td) / "z.h")
+            self.assertIsNot(cfg["devices"], cfg2["devices"])
+            self.assertEqual(len(cfg["devices"]), 1)
+            self.assertEqual(len(cfg2["devices"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
