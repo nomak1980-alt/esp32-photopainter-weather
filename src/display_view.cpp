@@ -4,6 +4,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold12pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
+#include "big_fonts.h"
 #include "config.h"
 #include "view_model.h"
 #include "forecast.h"
