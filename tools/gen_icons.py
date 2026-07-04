@@ -55,9 +55,33 @@ def cell_content_box(cell):
     return (bbox[0], y0 + bbox[1], bbox[2], y0 + bbox[3])
 
 def quantize(img):
-    """RGB -> Palettenindizes 0..5 mit Floyd-Steinberg; Hintergrund bleibt Weiss(1)."""
+    """RGB -> Palettenindizes 0..5 mit eigenem Floyd-Steinberg (7/16, 3/16,
+    5/16, 1/16). Unbunte Pixel (Saettigung < 40 im ORIGINAL, vor der Fehler-
+    diffusion) duerfen nur zwischen SCHWARZ und WEISS dithern -- PILs globales
+    FS wuerde Grautoene (Sturmwolke, Nebelbalken) sonst bunt aus Rot/Gelb/Blau
+    mischen. Bunte Pixel dithern ueber alle 6 Panelfarben."""
     rgb = img.convert("RGB")
-    q = rgb.quantize(palette=palimg, dither=Image.FLOYDSTEINBERG)
+    w, h = rgb.size
+    src = list(rgb.getdata())
+    buf = [list(v) for v in src]          # Arbeitspuffer mit Fehlerdiffusion
+    out = []
+    for y in range(h):
+        for x in range(w):
+            i = y*w + x
+            r, g, b = (min(255.0, max(0.0, c)) for c in buf[i])
+            o = src[i]
+            cand = (0, 1) if max(o) - min(o) < 40 else range(len(PAL))
+            k = min(cand, key=lambda j: (r-PAL[j][0])**2 + (g-PAL[j][1])**2 + (b-PAL[j][2])**2)
+            out.append(k)
+            err = (r - PAL[k][0], g - PAL[k][1], b - PAL[k][2])
+            for dx, dy, f in ((1,0,7/16), (-1,1,3/16), (0,1,5/16), (1,1,1/16)):
+                nx, ny = x+dx, y+dy
+                if 0 <= nx < w and ny < h:
+                    n = buf[ny*w + nx]
+                    for c in range(3): n[c] += err[c]*f
+    q = Image.new("P", (w, h))
+    q.putpalette(flat + flat[:3]*(256-len(PAL)))
+    q.putdata(out)
     return q
 
 def band_columns(band):
