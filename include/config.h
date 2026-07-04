@@ -21,9 +21,19 @@
 #define EPD_RST_PIN  12
 #define EPD_BUSY_PIN 13
 
-// --- Vorhersage: Anzahl Tage (Standort/Geraete in user_config.h) ---
-#define FORECAST_DAYS 7
+// --- Vorhersage: Anzahl Tage/Stunden (Standort/Geraete in user_config.h) ---
+#define FORECAST_DAYS  7
+#define FORECAST_HOURS 8
 
 // Persoenliche Konfiguration (Geraete-MACs, Standort) -> nicht im Repo.
 // include/user_config.h aus user_config.example.h erstellen und ausfuellen.
 #include "user_config.h"
+
+// Defaults, falls eine aeltere user_config.h die neuen Schalter nicht kennt.
+// DISPLAY_MODE: 0=Tages-Vorschau, 1=Stunden-Vorschau, 2=6 Thermometer ohne Leiste
+#ifndef DISPLAY_MODE
+#define DISPLAY_MODE 0
+#endif
+#ifndef HEADER_TITLE
+#define HEADER_TITLE "SwitchBot Wetter"
+#endif
