@@ -105,7 +105,7 @@ void setup() {
                   cur[i].temperature, cur[i].humidity, cur[i].battery);
   if (changed) {
     displayInit();
-    displayRender(cur, DEVICE_COUNT, hi, fc, fcCount);
+    displayRender(cur, DEVICE_COUNT, hi, fc, fcCount, nullptr, 0);
   }
 
   // 5) Stand sichern, Funk aus, schlafen

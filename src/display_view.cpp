@@ -121,7 +121,7 @@ static void drawTile(int x, int y, int w, int h, const char* name, const SensorR
     fmtBatt(r, buf, sizeof buf);
     display.setFont(&FreeSans9pt7b);
     display.setTextColor(batteryWarn(r.battery) ? GxEPD_RED : GxEPD_BLACK);
-    display.setCursor(x + 18, y + 128);
+    display.setCursor(x + 18, y + h - 14);   // statt y + 128
     display.print(buf);
   } else {
     display.setFont(&FreeSans9pt7b);
@@ -199,8 +199,43 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
   }
 }
 
+// Stundenleiste: pro Spalte Uhrzeit, Icon, Temperatur (Gradring), Niederschlag mm.
+static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
+  display.drawLine(0, y0, 800, y0, GxEPD_BLACK);
+  int cols = count < FORECAST_HOURS ? count : FORECAST_HOURS;
+  if (cols <= 0) return;
+  int colW = 800 / cols;
+  for (int i = 0; i < cols; i++) {
+    int cx = i * colW + colW / 2;
+    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 90, GxEPD_BLACK);
+    char hbuf[8];
+    snprintf(hbuf, sizeof hbuf, "%02d:00", hf[i].hour);
+    display.setFont(&FreeSansBold12pt7b);
+    display.setTextColor(GxEPD_BLACK);
+    display.setCursor(i * colW + 6, y0 + 22);
+    display.print(hbuf);
+    drawWeatherIcon(cx, y0 + 46, wmoToIcon(hf[i].wmoCode));
+    // Temperatur links unten (Gradring wie Tagesleiste), Niederschlag blau daneben
+    char ts[8];
+    snprintf(ts, sizeof ts, "%d", hf[i].temp);
+    display.setCursor(i * colW + 6, y0 + 90);
+    display.print(ts);
+    int dx = display.getCursorX();
+    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLACK);
+    char ps[12];
+    if (hf[i].precipMm >= 0.05f) snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
+    else snprintf(ps, sizeof ps, "0 mm");
+    display.setFont(&FreeSans9pt7b);
+    display.setTextColor(GxEPD_BLUE);
+    display.setCursor(dx + 12, y0 + 90);
+    display.print(ps);
+  }
+}
+
 void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
-                   const DayForecast* fc, int fcCount) {
+                   const DayForecast* fc, int fcCount,
+                   const HourForecast* hf, int hfCount) {
+  (void)fc; (void)fcCount; (void)hf; (void)hfCount;  // je nach Modus unbenutzt
   display.setFullWindow();
   display.firstPage();
   do {
@@ -210,7 +245,7 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     display.setFont(&FreeSansBold18pt7b);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(12, 40);
-    display.print("SwitchBot Wetter");
+    printUtf8(HEADER_TITLE, GxEPD_BLACK);
     // Untertitel: Uhrzeit + eigener Akku
     char sub[48];
     snprintf(sub, sizeof sub, "%02d:%02d    Akku %d%%%s",
@@ -242,14 +277,24 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     display.setCursor(lhx + 38, 66);
     display.print(loch);
     display.drawLine(0, 82, 800, 82, GxEPD_BLACK);
-    // --- 2x2 Kacheln (verkleinert, Platz fuer Wetterbalken unten) ---
+    // --- Kachelraster: 2x2 mit Wetterleiste, 2x3 ohne (Modus 2) ---
+#if DISPLAY_MODE == 2
+    const int FC_Y = 480;
+    const int ROWS = 3;
+#else
     const int FC_Y = 384;
-    int gx = 8, gy = 88, gw = (800 - 24) / 2, gh = (FC_Y - 88 - 4) / 2;
+    const int ROWS = 2;
+#endif
+    int gx = 8, gy = 88, gw = (800 - 24) / 2, gh = (FC_Y - 88 - 4 * (ROWS - 1)) / ROWS;
     int pos = 0;
-    for (int row = 0; row < 2 && pos < n; row++)
+    for (int row = 0; row < ROWS && pos < n; row++)
       for (int col = 0; col < 2 && pos < n; col++, pos++)
         drawTile(gx + col * (gw + 8), gy + row * (gh + 4), gw, gh, DEVICE_NAMES[pos], r[pos]);
-    // --- Wettervorhersage-Balken ---
+    // --- Wetterleiste je nach Modus ---
+#if DISPLAY_MODE == 0
     drawForecastBar(FC_Y, fc, fcCount);
+#elif DISPLAY_MODE == 1
+    drawHourlyBar(FC_Y, hf, hfCount);
+#endif
   } while (display.nextPage());
 }

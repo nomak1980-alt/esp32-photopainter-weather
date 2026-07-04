@@ -9,4 +9,5 @@ struct HeaderInfo {
 };
 void displayInit();
 void displayRender(const SensorReading* r, int n, const HeaderInfo& h,
-                   const DayForecast* fc, int fcCount);
+                   const DayForecast* fc, int fcCount,
+                   const HourForecast* hf, int hfCount);

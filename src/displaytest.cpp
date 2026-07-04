@@ -33,7 +33,7 @@ void setup() {
     fc[i].wmoCode = codes[i]; fc[i].tMax = tmax[i]; fc[i].tMin = tmin[i];
     fc[i].wday = (2 + i) % 7; fc[i].valid = true;   // ab Dienstag
   }
-  displayRender(demo, 4, h, fc, 7);
+  displayRender(demo, 4, h, fc, 7, nullptr, 0);
   Serial.println("display test done");
 }
 
