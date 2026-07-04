@@ -57,13 +57,48 @@ static void printTempC(int x, int baselineY, const char* numbuf,
   display.print("C");
 }
 
+// Gibt UTF-8-Text aus. Die GFX-Fonts sind reines ASCII (7b), daher werden
+// Umlaute als Basisbuchstabe mit zwei aufgemalten Punkten gezeichnet, ß als "ss".
+// Punktposition/-groesse werden aus den Glyphen-Metriken des aktuellen Fonts abgeleitet.
+static void printUtf8(const char* s, uint16_t color) {
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) { display.write((uint8_t)c); s++; continue; }
+    unsigned char c2 = (unsigned char)s[1];
+    if ((c & 0xE0) != 0xC0 || (c2 & 0xC0) != 0x80) { s++; continue; }
+    unsigned cp = ((c & 0x1F) << 6) | (c2 & 0x3F);
+    s += 2;
+    char base;
+    switch (cp) {
+      case 0xE4: base = 'a'; break;  // ä
+      case 0xF6: base = 'o'; break;  // ö
+      case 0xFC: base = 'u'; break;  // ü
+      case 0xC4: base = 'A'; break;  // Ä
+      case 0xD6: base = 'O'; break;  // Ö
+      case 0xDC: base = 'U'; break;  // Ü
+      case 0xDF: display.print("ss"); continue;  // ß
+      default: continue;             // unbekanntes Zeichen ueberspringen
+    }
+    int x0 = display.getCursorX(), y0 = display.getCursorY();
+    char tmp[2] = {base, 0};
+    int16_t bx, by; uint16_t bw, bh;
+    display.getTextBounds(tmp, x0, y0, &bx, &by, &bw, &bh);
+    display.write((uint8_t)base);
+    int cx = bx + bw / 2;
+    int dotY = by - 4;               // knapp ueber der Glyphen-Oberkante
+    int r = bh >= 20 ? 3 : 2;
+    display.fillCircle(cx - r - 2, dotY, r, color);
+    display.fillCircle(cx + r + 2, dotY, r, color);
+  }
+}
+
 static void drawTile(int x, int y, int w, int h, const char* name, const SensorReading& r) {
   display.drawRect(x, y, w, h, GxEPD_BLACK);
   display.setTextSize(1);
   display.setFont(&FreeSansBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(x + 14, y + 30);
-  display.print(name);
+  printUtf8(name, GxEPD_BLACK);
   display.setCursor(x + w - 58, y + 30);
   display.setTextColor(r.valid ? GxEPD_GREEN : GxEPD_BLACK);
   display.print(r.valid ? "ON" : "--");
