@@ -111,6 +111,7 @@ void setup() {
   for (int i = 0; i < hfCount && !hfChanged; i++)
     if (hf[i].hour != g_prevHf[i].hour || hf[i].wmoCode != g_prevHf[i].wmoCode ||
         hf[i].temp != g_prevHf[i].temp ||
+        hf[i].isDay != g_prevHf[i].isDay ||
         fabsf(hf[i].precipMm - g_prevHf[i].precipMm) > 0.05f)
       hfChanged = true;
   bool changed = !g_havePrev || anyChanged(cur, g_prev, DEVICE_COUNT) || fcChanged || hfChanged;

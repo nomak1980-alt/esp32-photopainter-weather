@@ -93,6 +93,14 @@ static void printUtf8(const char* s, uint16_t color) {
   }
 }
 
+// Kleines Batterie-Piktogramm: Rahmen + Fuellstand + Nase rechts.
+static void drawBattIcon(int x, int y, int pct, uint16_t color) {
+  display.drawRect(x, y, 24, 12, color);
+  display.fillRect(x + 26, y + 3, 3, 6, color);
+  int fill = pct > 0 ? (pct * 20) / 100 : 0;
+  if (fill > 0) display.fillRect(x + 2, y + 2, fill, 8, color);
+}
+
 static void drawTile(int x, int y, int w, int h, const char* name, const SensorReading& r) {
   display.drawRect(x, y, w, h, GxEPD_BLACK);
   display.setTextSize(1);
@@ -100,34 +108,36 @@ static void drawTile(int x, int y, int w, int h, const char* name, const SensorR
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(x + 14, y + 30);
   printUtf8(name, GxEPD_BLACK);
-  display.setCursor(x + w - 58, y + 30);
-  display.setTextColor(r.valid ? GxEPD_GREEN : GxEPD_BLACK);
-  display.print(r.valid ? "ON" : "--");
+  // Akku rechts oben: Piktogramm + Prozent (nichts, wenn unbekannt)
+  if (r.valid && r.battery >= 0) {
+    uint16_t bc = batteryWarn(r.battery) ? GxEPD_RED : GxEPD_BLACK;
+    char bp[8];
+    snprintf(bp, sizeof bp, "%d%%", r.battery);
+    int16_t bx, by; uint16_t bw, bh;
+    display.getTextBounds(bp, 0, 0, &bx, &by, &bw, &bh);
+    int tx = x + w - 14 - bw;
+    display.setTextColor(bc);
+    display.setCursor(tx, y + 30);
+    display.print(bp);
+    drawBattIcon(tx - 38, y + 12, r.battery, bc);
+  }
   char buf[16];
   if (r.valid) {
-    // grosse Temperatur (~2x): 18pt-Font doppelt skaliert
+    // Temperatur gross (36pt), Feuchte daneben (32pt, ~10% kleiner)
     char hum[8];
     fmtTemp(r, buf, sizeof buf);
-    display.setFont(&FreeSansBold18pt7b);
-    display.setTextSize(2);
-    printTempC(x + 18, y + 96, buf, 7, 38, toGx(tempColor(r.temperature)));
+    display.setFont(&ArialBold36);
+    printTempC(x + 18, y + h - 22, buf, 7, 46, toGx(tempColor(r.temperature)));
     int hx = display.getCursorX();
-    // Feuchte rechts neben Temperatur, mittelgross
-    display.setTextSize(1);
     fmtHum(r, hum, sizeof hum);
-    display.setFont(&FreeSansBold18pt7b);
+    display.setFont(&ArialBold32);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(hx + 40, y + 96);
+    display.setCursor(hx + 34, y + h - 22);
     display.print(hum); display.print("%");
-    fmtBatt(r, buf, sizeof buf);
-    display.setFont(&FreeSans9pt7b);
-    display.setTextColor(batteryWarn(r.battery) ? GxEPD_RED : GxEPD_BLACK);
-    display.setCursor(x + 18, y + h - 14);   // statt y + 128
-    display.print(buf);
   } else {
     display.setFont(&FreeSans9pt7b);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(x + 18, y + 90);
+    display.setCursor(x + 18, y + (h + 10) / 2);
     display.print("-- keine Daten --");
   }
 }
@@ -168,17 +178,17 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
   int colW = 800 / days;
   for (int i = 0; i < days; i++) {
     int cx = i * colW + colW / 2;
-    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 90, GxEPD_BLACK);
+    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 128, GxEPD_BLACK);
     // Wochentag
     display.setFont(&FreeSansBold12pt7b);
     display.setTextColor(GxEPD_BLACK);
     const char* wd = WDAY_DE[fc[i].wday % 7];
     int16_t bx, by; uint16_t bw, bh;
     display.getTextBounds(wd, 0, 0, &bx, &by, &bw, &bh);
-    display.setCursor(i * colW + 8, y0 + 22);   // linksbuendig
+    display.setCursor(i * colW + 8, y0 + 24);   // linksbuendig
     display.print(wd);
-    // Icon (groesser, nach rechts/oben gerueckt)
-    drawWeatherIcon(cx + 16, y0 + 46, wmoToIcon(fc[i].wmoCode));
+    // Icon (mittig)
+    drawWeatherIcon(cx, y0 + 68, wmoToIcon(fc[i].wmoCode));
     // Temperaturen Max (schwarz) / Min (blau), je mit kleinem Gradring
     char hs[8], ls[8], full[20];
     snprintf(hs, sizeof hs, "%d", fc[i].tMax);
@@ -188,15 +198,15 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
     display.getTextBounds(full, 0, 0, &bx, &by, &bw, &bh);
     int tx = cx - bw / 2;
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(tx, y0 + 90);
+    display.setCursor(tx, y0 + 128);
     display.print(hs);
     int dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLACK);   // Gradring Max
-    display.setCursor(dx + 9, y0 + 90);
+    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLACK);   // Gradring Max
+    display.setCursor(dx + 9, y0 + 128);
     display.setTextColor(GxEPD_BLUE);
     display.print(ls);
     dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLUE);    // Gradring Min
+    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLUE);    // Gradring Min
   }
 }
 
@@ -208,28 +218,28 @@ static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
   int colW = 800 / cols;
   for (int i = 0; i < cols; i++) {
     int cx = i * colW + colW / 2;
-    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 90, GxEPD_BLACK);
+    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 128, GxEPD_BLACK);
     char hbuf[8];
     snprintf(hbuf, sizeof hbuf, "%02d:00", hf[i].hour);
     display.setFont(&FreeSansBold12pt7b);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(i * colW + 6, y0 + 22);
+    display.setCursor(i * colW + 6, y0 + 24);
     display.print(hbuf);
-    drawWeatherIcon(cx, y0 + 46, wmoToIcon(hf[i].wmoCode));
+    drawWeatherIcon(cx, y0 + 68, wmoToIconDN(hf[i].wmoCode, hf[i].isDay));
     // Temperatur links unten (Gradring wie Tagesleiste), Niederschlag blau daneben
     char ts[8];
     snprintf(ts, sizeof ts, "%d", hf[i].temp);
-    display.setCursor(i * colW + 6, y0 + 90);
+    display.setCursor(i * colW + 6, y0 + 128);
     display.print(ts);
     int dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLACK);
+    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLACK);
     char ps[12];
     if (hf[i].precipMm >= 9.95f)      snprintf(ps, sizeof ps, "%.0f mm", hf[i].precipMm);
     else if (hf[i].precipMm >= 0.05f) snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
     else                              snprintf(ps, sizeof ps, "0 mm");
     display.setFont(&FreeSans9pt7b);
     display.setTextColor(GxEPD_BLUE);
-    display.setCursor(dx + 12, y0 + 90);
+    display.setCursor(dx + 12, y0 + 128);
     display.print(ps);
   }
 }
@@ -267,16 +277,14 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     display.print("Hier");
     char tnum[12];
     snprintf(tnum, sizeof tnum, "%.1f", hi.localTemp);
-    display.setFont(&FreeSansBold18pt7b);
-    display.setTextSize(2);
-    printTempC(478, 66, tnum, 7, 38, toGx(tempColor(hi.localTemp)));
+    display.setFont(&ArialBold36);
+    printTempC(478, 66, tnum, 7, 46, toGx(tempColor(hi.localTemp)));
     int lhx = display.getCursorX();
-    display.setTextSize(1);
     char loch[8];
     snprintf(loch, sizeof loch, "%d%%", hi.localHum);
-    display.setFont(&FreeSansBold18pt7b);
+    display.setFont(&ArialBold32);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(lhx + 38, 66);
+    display.setCursor(lhx + 34, 66);
     display.print(loch);
     display.drawLine(0, 82, 800, 82, GxEPD_BLACK);
     // --- Kachelraster: 2x2 mit Wetterleiste, 2x3 ohne (Modus 2) ---
@@ -284,7 +292,7 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     const int FC_Y = 480;
     const int ROWS = 3;
 #else
-    const int FC_Y = 384;
+    const int FC_Y = 344;
     const int ROWS = 2;
 #endif
     int gx = 8, gy = 88, gw = (800 - 24) / 2, gh = (FC_Y - 88 - 4 * (ROWS - 1)) / ROWS;
