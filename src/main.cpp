@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <time.h>
+#include <math.h>
 #include "config.h"
 #include "secrets.h"
 #include "reading.h"
@@ -20,6 +21,8 @@ RTC_DATA_ATTR bool g_havePrev = false;
 RTC_DATA_ATTR int  g_ntpDay   = -1;   // letzter NTP-Sync (tm_yday)
 RTC_DATA_ATTR DayForecast g_prevFc[FORECAST_DAYS];
 RTC_DATA_ATTR int  g_prevFcCount = 0;
+RTC_DATA_ATTR HourForecast g_prevHf[FORECAST_HOURS];
+RTC_DATA_ATTR int  g_prevHfCount = 0;
 
 static bool wifiConnect(uint32_t ms = 15000) {
   WiFi.mode(WIFI_STA);
@@ -64,12 +67,18 @@ void setup() {
   SensorReading cur[DEVICE_COUNT];
   DayForecast fc[FORECAST_DAYS];
   int fcCount = 0;
+  HourForecast hf[FORECAST_HOURS];
+  int hfCount = 0;
   hi.wifiOk = wifiConnect();
   if (hi.wifiOk) {
     maybeNtp(now);
     haveTime = rtcNow(now);
     fetchAll(DEVICE_IDS, cur, DEVICE_COUNT);
+#if DISPLAY_MODE == 0
     fcCount = fetchForecast(fc, FORECAST_DAYS);
+#elif DISPLAY_MODE == 1
+    hfCount = fetchHourlyForecast(hf, FORECAST_HOURS);
+#endif
   } else {
     for (int i = 0; i < DEVICE_COUNT; i++) {
       strncpy(cur[i].id, DEVICE_IDS[i], sizeof(cur[i].id) - 1);
@@ -87,6 +96,10 @@ void setup() {
     for (int i = 0; i < g_prevFcCount; i++) fc[i] = g_prevFc[i];
     fcCount = g_prevFcCount;
   }
+  if (hfCount == 0 && g_prevHfCount > 0) {
+    for (int i = 0; i < g_prevHfCount; i++) hf[i] = g_prevHf[i];
+    hfCount = g_prevHfCount;
+  }
 
   // 4) Nur bei Aenderung zeichnen (Sensoren ODER Vorhersage)
   bool fcChanged = (fcCount != g_prevFcCount);
@@ -94,7 +107,13 @@ void setup() {
     if (fc[i].wmoCode != g_prevFc[i].wmoCode ||
         fc[i].tMax != g_prevFc[i].tMax || fc[i].tMin != g_prevFc[i].tMin)
       fcChanged = true;
-  bool changed = !g_havePrev || anyChanged(cur, g_prev, DEVICE_COUNT) || fcChanged;
+  bool hfChanged = (hfCount != g_prevHfCount);
+  for (int i = 0; i < hfCount && !hfChanged; i++)
+    if (hf[i].hour != g_prevHf[i].hour || hf[i].wmoCode != g_prevHf[i].wmoCode ||
+        hf[i].temp != g_prevHf[i].temp ||
+        fabsf(hf[i].precipMm - g_prevHf[i].precipMm) > 0.05f)
+      hfChanged = true;
+  bool changed = !g_havePrev || anyChanged(cur, g_prev, DEVICE_COUNT) || fcChanged || hfChanged;
   Serial.printf("wifi=%d time=%02d:%02d changed=%d fc=%d sleep=%us\n",
                 hi.wifiOk, hi.hour, hi.minute, changed, fcCount, sleepSeconds(hi.hour));
   Serial.printf("local SHTC3: %.1fC %d%%  Akku %d%% chg=%d\n",
@@ -105,7 +124,7 @@ void setup() {
                   cur[i].temperature, cur[i].humidity, cur[i].battery);
   if (changed) {
     displayInit();
-    displayRender(cur, DEVICE_COUNT, hi, fc, fcCount, nullptr, 0);
+    displayRender(cur, DEVICE_COUNT, hi, fc, fcCount, hf, hfCount);
   }
 
   // 5) Stand sichern, Funk aus, schlafen
@@ -113,6 +132,8 @@ void setup() {
   g_havePrev = true;
   for (int i = 0; i < fcCount; i++) g_prevFc[i] = fc[i];
   g_prevFcCount = fcCount;
+  for (int i = 0; i < hfCount; i++) g_prevHf[i] = hf[i];
+  g_prevHfCount = hfCount;
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   sleepFor(sleepSeconds(hi.hour));
