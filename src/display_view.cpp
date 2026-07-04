@@ -223,8 +223,9 @@ static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
     int dx = display.getCursorX();
     display.drawCircle(dx + 3, y0 + 78, 2, GxEPD_BLACK);
     char ps[12];
-    if (hf[i].precipMm >= 0.05f) snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
-    else snprintf(ps, sizeof ps, "0 mm");
+    if (hf[i].precipMm >= 9.95f)      snprintf(ps, sizeof ps, "%.0f mm", hf[i].precipMm);
+    else if (hf[i].precipMm >= 0.05f) snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
+    else                              snprintf(ps, sizeof ps, "0 mm");
     display.setFont(&FreeSans9pt7b);
     display.setTextColor(GxEPD_BLUE);
     display.setCursor(dx + 12, y0 + 90);
