@@ -7,12 +7,21 @@
 WIcon wmoToIcon(int c) {
   if (c == 0) return ICON_SUN;
   if (c == 1 || c == 2) return ICON_PARTLY;
-  if (c == 3 || c == 45 || c == 48) return ICON_CLOUD;
+  if (c == 45 || c == 48) return ICON_FOG;
+  if (c == 3) return ICON_CLOUD;
   if (c == 71 || c == 73 || c == 75 || c == 77 || c == 85 || c == 86) return ICON_SNOW;
   if (c == 95 || c == 96 || c == 99) return ICON_STORM;
-  // 51..67 Niesel/Regen, 80..82 Schauer
   if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return ICON_RAIN;
   return ICON_CLOUD;
+}
+
+// Tag/Nacht-Variante: nachts wird aus Sonne Mond (0..1) bzw. Mond+Wolke (2).
+WIcon wmoToIconDN(int c, bool isDay) {
+  if (!isDay) {
+    if (c == 0 || c == 1) return ICON_MOON;
+    if (c == 2) return ICON_MOON_PARTLY;
+  }
+  return wmoToIcon(c);
 }
 
 int weekdayFromDate(int y, int m, int d) {
@@ -58,6 +67,7 @@ bool parseHourlyJson(const char* json, HourForecast* out, int maxHours, int* out
   JsonArray code = hourly["weather_code"];
   JsonArray temp = hourly["temperature_2m"];
   JsonArray prec = hourly["precipitation"];
+  JsonArray isday = hourly["is_day"];   // optional (aeltere Antworten)
   if (time.isNull() || code.isNull() || temp.isNull() || prec.isNull()) return false;
   int n = 0;
   for (int i = 0; i < (int)time.size() && n < maxHours; i++) {
@@ -66,6 +76,7 @@ bool parseHourlyJson(const char* json, HourForecast* out, int maxHours, int* out
     out[n].wmoCode = code[i].as<int>();
     out[n].temp = (int)lround(temp[i].as<float>());
     out[n].precipMm = prec[i].as<float>();
+    out[n].isDay = isday.isNull() ? true : (isday[i].as<int>() != 0);
     out[n].valid = true;
     n++;
   }
@@ -108,7 +119,7 @@ int fetchHourlyForecast(HourForecast* out, int maxHours) {
   HTTPClient http;
   String url = String("https://api.open-meteo.com/v1/forecast?latitude=") + FORECAST_LAT +
                "&longitude=" + FORECAST_LON +
-               "&hourly=temperature_2m,weather_code,precipitation" +
+               "&hourly=temperature_2m,weather_code,precipitation,is_day" +
                "&timezone=" + FORECAST_TZ + "&forecast_hours=" + String(maxHours);
   if (!http.begin(cli, url)) return 0;
   int count = 0;
