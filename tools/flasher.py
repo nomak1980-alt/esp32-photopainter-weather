@@ -30,10 +30,15 @@ def find_port():
 
 
 def check_connection(port):
-    r = subprocess.run(
-        [sys.executable, str(ESPTOOL), "--port", port, "--baud", "115200", "read_mac"],
-        capture_output=True, text=True, timeout=90)
-    return r.returncode == 0, (r.stdout or "") + (r.stderr or "")
+    try:
+        r = subprocess.run(
+            [sys.executable, str(ESPTOOL), "--port", port, "--baud", "115200", "read_mac"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
+        return r.returncode == 0, (r.stdout or "") + (r.stderr or "")
+    except subprocess.TimeoutExpired:
+        return False, f"Timeout bei Verbindungsprüfung (Board schläft?): {port}"
+    except (FileNotFoundError, OSError) as e:
+        return False, f"esptool.py nicht erreichbar: {e}"
 
 
 def upload(port, on_line):
