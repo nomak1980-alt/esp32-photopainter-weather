@@ -60,27 +60,87 @@ def quantize(img):
     q = rgb.quantize(palette=palimg, dither=Image.FLOYDSTEINBERG)
     return q
 
+def band_columns(band):
+    """Spaltensegmente eines Zeilenbands finden (>=40 weisse Spalten Abstand).
+    Ein starres W//3-Raster geht NICHT: die Icons ragen teils ueber die
+    Drittelgrenzen (cloud/storm wuerden links beschnitten, partly/snow/
+    moon_partly bekaemen den Anschnitt des Nachbar-Icons in die Box und
+    wuerden dadurch beim Einpassen geschrumpft)."""
+    g = band.convert("L")
+    w, h = g.size
+    px = g.load()
+    cols = [min(px[x, y] for y in range(0, h, 2)) < WHITE_THR for x in range(w)]
+    segs, x = [], 0
+    while x < w:
+        if cols[x]:
+            x0 = x
+            gap = 0
+            while x < w and gap < 40:
+                gap = gap + 1 if not cols[x] else 0
+                x += 1
+            segs.append((x0, x - gap))
+        else:
+            x += 1
+    return segs
+
 im = Image.open(SRC).convert("RGB")
 W, H = im.size
 grid_h = int(H * 0.78)               # untere Vorschauzeile abschneiden
 icons = []
 for r in range(3):
+    y0b, y1b = r*grid_h//3, (r+1)*grid_h//3
+    band = im.crop((0, y0b, W, y1b))
+    csegs = band_columns(band)
+    assert len(csegs) == 3, f"Zeile {r}: erwarte 3 Spaltensegmente, habe {csegs}"
     for c in range(3):
-        cell = im.crop((c*W//3, r*grid_h//3, (c+1)*W//3, (r+1)*grid_h//3))
+        x0, x1 = csegs[c]
+        cell = band.crop((x0, 0, x1, y1b - y0b))
         box = cell_content_box(cell)
         assert box, f"kein Icon in Zelle {r},{c}"
         ic = cell.crop(box)
-        # weisse Raender exakt trimmen, dann proportional auf SIZE einpassen
+        # weisse Raender exakt trimmen (beide Achsen!), dann proportional auf
+        # SIZE einpassen -- Leerraum in der Box wuerde das Motiv schrumpfen
+        tb = Image.eval(ic.convert("L"), lambda v: 255 if v < WHITE_THR else 0).getbbox()
+        if tb: ic = ic.crop(tb)
         s = SIZE / max(ic.size)
         ic = ic.resize((max(1,round(ic.width*s)), max(1,round(ic.height*s))), Image.LANCZOS)
         canvas = Image.new("RGB", (SIZE, SIZE), (255,255,255))
         canvas.paste(ic, ((SIZE-ic.width)//2, (SIZE-ic.height)//2))
-        # fast-weisse Pixel VOR dem Dithern hart auf Weiss ziehen (kein Sprenkeln
-        # im transparenten Hintergrund)
+        # VOR dem Dithern: fast-weisse Pixel hart auf Weiss (kein Sprenkeln im
+        # Hintergrund); dunkle UND ungesaettigte Pixel hart auf Schwarz, damit
+        # die Navy-Konturen keine roten/gruenen Dither-Fransen bekommen
         p = canvas.load()
         for y in range(SIZE):
             for x in range(SIZE):
-                if min(p[x,y]) > WHITE_THR: p[x,y] = (255,255,255)
+                v = p[x,y]
+                if min(v) > WHITE_THR:
+                    p[x,y] = (255,255,255)
+                elif max(v) < 90 and max(v) - min(v) < 60:
+                    p[x,y] = (0,0,0)
+                elif max(v) < 130 and max(v) - min(v) >= 60:
+                    # dunkle GESAETTIGTE Pixel (olivfarbenes AA der Kontur
+                    # Richtung Gelb) dithern sonst zu gruen/roten Einzelpixeln.
+                    # Ungesaettigte Grautoene 90..130 bleiben ungesnappt, damit
+                    # der Sturmwolken-Verlauf gedithert bleibt.
+                    p[x,y] = (0,0,0)
+        # 2. Pass: der Anti-Aliasing-Halo der Konturen (ungesaettigte Mitteltoene
+        # DIREKT NEBEN Schwarz) wuerde sonst zu bunten Dither-Sprenkeln entlang
+        # der Kanten -- nach Helligkeit auf Schwarz/Weiss snappen. Flaechige
+        # Grauverlaeufe ohne Schwarz-Nachbarn (Nebelbalken) bleiben unberuehrt.
+        for _ in range(2):
+            snap = []
+            for y in range(SIZE):
+                for x in range(SIZE):
+                    v = p[x,y]
+                    if not (max(v) - min(v) < 60 and 0 < max(v) <= WHITE_THR):
+                        continue
+                    near_black = any(p[nx,ny] == (0,0,0)
+                                     for nx in range(max(0,x-1), min(SIZE,x+2))
+                                     for ny in range(max(0,y-1), min(SIZE,y+2)))
+                    if near_black:
+                        snap.append((x, y, (0,0,0) if max(v) < 170 else (255,255,255)))
+            for x, y, col in snap:
+                p[x,y] = col
         icons.append(quantize(canvas))
 
 # ---- Header schreiben ----
