@@ -47,6 +47,31 @@ bool parseForecastJson(const char* json, DayForecast* out, int maxDays, int* out
   return n > 0;
 }
 
+bool parseHourlyJson(const char* json, HourForecast* out, int maxHours, int* outCount) {
+  if (outCount) *outCount = 0;
+  JsonDocument doc;
+  if (deserializeJson(doc, json)) return false;
+  JsonObject hourly = doc["hourly"];
+  if (hourly.isNull()) return false;
+  JsonArray time = hourly["time"];
+  JsonArray code = hourly["weather_code"];
+  JsonArray temp = hourly["temperature_2m"];
+  JsonArray prec = hourly["precipitation"];
+  if (time.isNull() || code.isNull() || temp.isNull() || prec.isNull()) return false;
+  int n = 0;
+  for (int i = 0; i < (int)time.size() && n < maxHours; i++) {
+    const char* ts = time[i];              // "YYYY-MM-DDTHH:MM"
+    out[n].hour = ts ? atoi(ts + 11) : 0;
+    out[n].wmoCode = code[i].as<int>();
+    out[n].temp = (int)lround(temp[i].as<float>());
+    out[n].precipMm = prec[i].as<float>();
+    out[n].valid = true;
+    n++;
+  }
+  if (outCount) *outCount = n;
+  return n > 0;
+}
+
 #if defined(ARDUINO)
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
@@ -74,6 +99,29 @@ int fetchForecast(DayForecast* out, int maxDays) {
   http.end();
   return count;
 }
+
+int fetchHourlyForecast(HourForecast* out, int maxHours) {
+  for (int i = 0; i < maxHours; i++) out[i].valid = false;
+  WiFiClientSecure cli;
+  cli.setInsecure();
+  HTTPClient http;
+  String url = String("https://api.open-meteo.com/v1/forecast?latitude=") + FORECAST_LAT +
+               "&longitude=" + FORECAST_LON +
+               "&hourly=temperature_2m,weather_code,precipitation" +
+               "&timezone=" + FORECAST_TZ + "&forecast_hours=" + String(maxHours);
+  if (!http.begin(cli, url)) return 0;
+  int count = 0;
+  int httpCode = http.GET();
+  if (httpCode == 200) {
+    String body = http.getString();
+    parseHourlyJson(body.c_str(), out, maxHours, &count);
+  } else {
+    Serial.printf("Open-Meteo hourly HTTP %d\n", httpCode);
+  }
+  http.end();
+  return count;
+}
 #else
 int fetchForecast(DayForecast*, int) { return 0; }
+int fetchHourlyForecast(HourForecast*, int) { return 0; }
 #endif

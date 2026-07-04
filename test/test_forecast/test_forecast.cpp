@@ -40,3 +40,26 @@ void test_parse_forecast_bad() {
   TEST_ASSERT_FALSE(parseForecastJson("{\"foo\":1}", d, 7, &count));
   TEST_ASSERT_EQUAL_INT(0, count);
 }
+
+void test_parse_hourly() {
+  const char* body = R"({"hourly":{"time":["2026-07-04T14:00","2026-07-04T15:00"],
+    "weather_code":[2,61],"temperature_2m":[27.6,26.2],
+    "precipitation":[0.0,1.4]}})";
+  HourForecast h[8];
+  int count = 0;
+  TEST_ASSERT_TRUE(parseHourlyJson(body, h, 8, &count));
+  TEST_ASSERT_EQUAL_INT(2, count);
+  TEST_ASSERT_EQUAL_INT(14, h[0].hour);
+  TEST_ASSERT_EQUAL_INT(28, h[0].temp);          // 27.6 gerundet
+  TEST_ASSERT_EQUAL(ICON_PARTLY, wmoToIcon(h[0].wmoCode));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, h[0].precipMm);
+  TEST_ASSERT_EQUAL_INT(15, h[1].hour);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.4f, h[1].precipMm);
+  TEST_ASSERT_EQUAL(ICON_RAIN, wmoToIcon(h[1].wmoCode));
+}
+
+void test_parse_hourly_bad() {
+  HourForecast h[8]; int count = -1;
+  TEST_ASSERT_FALSE(parseHourlyJson("{\"foo\":1}", h, 8, &count));
+  TEST_ASSERT_EQUAL_INT(0, count);
+}

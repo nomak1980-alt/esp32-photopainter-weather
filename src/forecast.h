@@ -10,6 +10,14 @@ struct DayForecast {
   bool valid;
 };
 
+struct HourForecast {
+  int   hour;      // 0..23 (lokale Zeit lt. API-Timezone)
+  int   wmoCode;   // Open-Meteo WMO weather code
+  int   temp;      // gerundet °C
+  float precipMm;  // Niederschlag mm in dieser Stunde
+  bool  valid;
+};
+
 // WMO-Wettercode -> Icon-Kategorie
 WIcon wmoToIcon(int code);
 
@@ -22,3 +30,9 @@ bool parseForecastJson(const char* json, DayForecast* out, int maxDays, int* out
 
 // Geraet: holt die Vorhersage per HTTPS. Gibt Anzahl gueltiger Tage zurueck.
 int fetchForecast(DayForecast* out, int maxDays);
+
+// Parst Open-Meteo /v1/forecast (hourly). Fuellt bis maxHours Eintraege.
+bool parseHourlyJson(const char* json, HourForecast* out, int maxHours, int* outCount);
+
+// Geraet: holt die naechsten Stunden per HTTPS (forecast_hours). Anzahl zurueck.
+int fetchHourlyForecast(HourForecast* out, int maxHours);
