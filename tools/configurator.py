@@ -70,8 +70,9 @@ class App:
         self.dev_frame.grid(sticky="nsew")
         btns = ttk.Frame(sens)
         btns.grid(sticky="w", pady=(6, 0))
-        ttk.Button(btns, text="Sensoren laden (SwitchBot-Cloud)",
-                   command=self.on_load_devices).pack(side="left")
+        self.btn_load = ttk.Button(btns, text="Sensoren laden (SwitchBot-Cloud)",
+                                   command=self.on_load_devices)
+        self.btn_load.pack(side="left")
         self.lbl_limit = ttk.Label(btns, text="")
         self.lbl_limit.pack(side="left", padx=10)
         self.render_devices()
@@ -161,6 +162,8 @@ class App:
             self.render_devices()
 
     def on_load_devices(self):
+        if self.busy:
+            return
         self.sync_devices()
         token, secret = self.v_token.get().strip(), self.v_secret.get().strip()
         if not token or not secret:
@@ -176,6 +179,8 @@ class App:
             self.msgq.put(("devices", meters))
         except RuntimeError as e:
             self.msgq.put(("error", str(e)))
+        except Exception as e:
+            self.msgq.put(("error", f"Unerwarteter Fehler bei der Cloud-Abfrage: {e}"))
 
     def merge_devices(self, meters):
         """Cloud-Liste einarbeiten: Bekanntes behalten, Neues anhaengen."""
@@ -255,6 +260,7 @@ class App:
         state = "disabled" if busy else "normal"
         self.btn_save.config(state=state)
         self.btn_upload.config(state=state)
+        self.btn_load.config(state=state)
         self.status.config(text=text)
 
     def log_clear(self):
@@ -275,6 +281,7 @@ class App:
                 if kind == "log":
                     self.log_line(payload)
                 elif kind == "devices":
+                    self.sync_devices()  # aktuelle Eingaben sichern, bevor render_devices() ueberschreibt
                     self.merge_devices(payload)
                     self.set_busy(False, f"{len(payload)} Sensoren gefunden.")
                 elif kind == "done":
