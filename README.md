@@ -51,6 +51,21 @@ PCF85063 RTC (0x51), AXP2101 PMIC (0x34). E-Paper über SPI
    ```
    Host-Tests: `pio test -e native`.
 
+## Konfiguration & Flashen
+
+`python tools/configurator.py` startet das Konfigurations-Tool:
+
+- **Sensoren laden** holt alle Thermo-/Hygrometer aus der SwitchBot-Cloud
+  (Token/Secret erforderlich). Auswahl, Name, Innen/Außen und Reihenfolge
+  sind editierbar.
+- **Anzeige-Modus:** Tages-Vorschau (4 Thermometer + 7-Tage-Leiste),
+  Stunden-Vorschau (4 Thermometer + 8-Stunden-Leiste) oder 6 Thermometer (2×3).
+- **Speichern** schreibt `tools/wetter_config.json` und generiert
+  `include/user_config.h` + `include/secrets.h` (alle gitignored).
+- **Upload** sucht den PhotoPainter automatisch (USB-VID 303A), prüft die
+  Verbindung und flasht per PlatformIO. Nach dem Flashen das Board per
+  PWR-Taste aus- und einschalten.
+
 ### Flashen-Hinweis (Akku-Falle)
 
 Der PhotoPainter hat einen Akku – USB-Abstecken resettet den Chip **nicht**, und
