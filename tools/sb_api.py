@@ -22,7 +22,7 @@ def sign_headers(token, secret, t=None, nonce=None):
 
 
 def is_meter(device_type):
-    return "Meter" in device_type or device_type in ("WoIOSensor", "Hub 2")
+    return "Meter" in device_type or device_type in ("WoIOSensor", "Hub 2", "Hub 3")
 
 
 def list_meters(token, secret, timeout=15):

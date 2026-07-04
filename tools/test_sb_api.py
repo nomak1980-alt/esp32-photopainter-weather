@@ -19,9 +19,9 @@ class TestSbApi(unittest.TestCase):
 
     def test_is_meter(self):
         for t in ("Meter", "MeterPlus", "MeterPro", "MeterPro(CO2)",
-                  "WoIOSensor", "Hub 2"):
+                  "WoIOSensor", "Hub 2", "Hub 3"):
             self.assertTrue(sb_api.is_meter(t), t)
-        for t in ("Bot", "Curtain", "Plug Mini (JP)", ""):
+        for t in ("Bot", "Curtain", "Plug Mini (JP)", "Hub Mini", ""):
             self.assertFalse(sb_api.is_meter(t), t)
 
 
