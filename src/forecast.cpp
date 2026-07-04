@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 
 WIcon wmoToIcon(int c) {
   if (c == 0) return ICON_SUN;
@@ -61,7 +62,7 @@ bool parseHourlyJson(const char* json, HourForecast* out, int maxHours, int* out
   int n = 0;
   for (int i = 0; i < (int)time.size() && n < maxHours; i++) {
     const char* ts = time[i];              // "YYYY-MM-DDTHH:MM"
-    out[n].hour = ts ? atoi(ts + 11) : 0;
+    out[n].hour = (ts && strlen(ts) >= 13) ? atoi(ts + 11) : 0;
     out[n].wmoCode = code[i].as<int>();
     out[n].temp = (int)lround(temp[i].as<float>());
     out[n].precipMm = prec[i].as<float>();

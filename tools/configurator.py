@@ -241,18 +241,21 @@ class App:
         threading.Thread(target=self._upload_worker, args=(port,), daemon=True).start()
 
     def _upload_worker(self, port):
-        ok, out = flasher.check_connection(port)
-        if not ok:
-            self.msgq.put(("log", out))
-            self.msgq.put(("error", "Chip antwortet nicht.\n\n" + flasher.PORT_HELP))
-            return
-        ok = flasher.upload(port, lambda line: self.msgq.put(("log", line)))
-        if ok:
-            self.msgq.put(("done", "Upload erfolgreich!\n\nDas Board startet nach dem "
-                                   "Flashen NICHT von selbst: PWR-Taste aus- und wieder "
-                                   "einschalten, dann läuft die neue Firmware."))
-        else:
-            self.msgq.put(("error", "Upload fehlgeschlagen - Details im Log."))
+        try:
+            ok, out = flasher.check_connection(port)
+            if not ok:
+                self.msgq.put(("log", out))
+                self.msgq.put(("error", "Chip antwortet nicht.\n\n" + flasher.PORT_HELP))
+                return
+            ok = flasher.upload(port, lambda line: self.msgq.put(("log", line)))
+            if ok:
+                self.msgq.put(("done", "Upload erfolgreich!\n\nDas Board startet nach dem "
+                                       "Flashen NICHT von selbst: PWR-Taste aus- und wieder "
+                                       "einschalten, dann läuft die neue Firmware."))
+            else:
+                self.msgq.put(("error", "Upload fehlgeschlagen - Details im Log."))
+        except Exception as e:
+            self.msgq.put(("error", f"Unerwarteter Fehler beim Upload: {e}"))
 
     # ---------- Infrastruktur ----------
     def set_busy(self, busy, text=""):
