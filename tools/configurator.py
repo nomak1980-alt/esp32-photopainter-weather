@@ -242,11 +242,17 @@ class App:
 
     def _upload_worker(self, port):
         try:
-            ok, out = flasher.check_connection(port)
-            if not ok:
-                self.msgq.put(("log", out))
-                self.msgq.put(("error", "Chip antwortet nicht.\n\n" + flasher.PORT_HELP))
+            # Erst bauen (dauert am laengsten), den Port erst unmittelbar vor
+            # dem Flashen frisch suchen: Das Board wechselt beim Reset zwischen
+            # Firmware- und Bootloader-USB die COM-Nummer und schlaeft schnell ein.
+            if not flasher.build(lambda line: self.msgq.put(("log", line))):
+                self.msgq.put(("error", "Build fehlgeschlagen - Details im Log."))
                 return
+            port = flasher.find_port()
+            if not port:
+                self.msgq.put(("error", "Board nicht mehr da.\n\n" + flasher.PORT_HELP))
+                return
+            self.msgq.put(("log", f"Upload über {port}…"))
             ok = flasher.upload(port, lambda line: self.msgq.put(("log", line)))
             if ok:
                 self.msgq.put(("done", "Upload erfolgreich!\n\nDas Board startet nach dem "

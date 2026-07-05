@@ -1,7 +1,6 @@
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
-import subprocess
+from unittest.mock import patch, MagicMock
 
 import flasher
 
@@ -21,37 +20,42 @@ class TestFlasher(unittest.TestCase):
         self.assertIn("PWR", flasher.PORT_HELP)
         self.assertIn("BOOT", flasher.PORT_HELP)
 
-    @patch('flasher.subprocess.run')
-    def test_check_connection_timeout(self, mock_run):
-        # Timeout (Board schlaeft) -> sollte (False, str) liefern
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd="x", timeout=90)
-        success, msg = flasher.check_connection("COM3")
-        self.assertFalse(success)
-        self.assertIn("Timeout", msg)
+    @staticmethod
+    def _mock_proc(lines, returncode):
+        proc = MagicMock()
+        proc.stdout = iter(lines)
+        proc.wait.return_value = returncode
+        return proc
 
-    @patch('flasher.subprocess.run')
-    def test_check_connection_esptool_missing(self, mock_run):
-        # esptool.py nicht gefunden -> sollte (False, str) liefern
-        mock_run.side_effect = FileNotFoundError("esptool.py nicht gefunden")
-        success, msg = flasher.check_connection("COM3")
-        self.assertFalse(success)
-        self.assertIn("esptool", msg)
+    @patch('flasher.subprocess.Popen')
+    def test_upload_success_streams_lines(self, mock_popen):
+        mock_popen.return_value = self._mock_proc(["Writing...\n", "SUCCESS\n"], 0)
+        seen = []
+        self.assertTrue(flasher.upload("COM4", seen.append))
+        self.assertEqual(seen, ["Writing...", "SUCCESS"])
+        args = mock_popen.call_args.args[0]
+        self.assertIn("--upload-port", args)
+        self.assertIn("COM4", args)
 
-    @patch('flasher.subprocess.run')
-    def test_check_connection_success(self, mock_run):
-        # Erfolgreicher read_mac -> (True, output)
-        mock_run.return_value = SimpleNamespace(returncode=0, stdout="MAC: 001122", stderr="")
-        success, msg = flasher.check_connection("COM3")
-        self.assertTrue(success)
-        self.assertIn("MAC", msg)
+    @patch('flasher.subprocess.Popen')
+    def test_upload_failure(self, mock_popen):
+        mock_popen.return_value = self._mock_proc(["Error 1\n"], 1)
+        self.assertFalse(flasher.upload("COM4", lambda line: None))
 
-    @patch('flasher.subprocess.run')
-    def test_check_connection_failure(self, mock_run):
-        # esptool-Fehler -> (False, stderr)
-        mock_run.return_value = SimpleNamespace(returncode=1, stdout="", stderr="Chip not found")
-        success, msg = flasher.check_connection("COM3")
-        self.assertFalse(success)
-        self.assertIn("Chip not found", msg)
+    @patch('flasher.subprocess.Popen')
+    def test_build_has_no_upload_target(self, mock_popen):
+        mock_popen.return_value = self._mock_proc([], 0)
+        self.assertTrue(flasher.build(lambda line: None))
+        args = mock_popen.call_args.args[0]
+        self.assertNotIn("upload", args)
+
+    @patch('flasher.subprocess.Popen')
+    def test_no_console_window_flag(self, mock_popen):
+        # pythonw: Unterprozesse duerfen keine Konsolenfenster aufpoppen lassen
+        mock_popen.return_value = self._mock_proc([], 0)
+        flasher.build(lambda line: None)
+        self.assertEqual(mock_popen.call_args.kwargs.get("creationflags"),
+                         flasher.NO_WINDOW)
 
 
 if __name__ == "__main__":
