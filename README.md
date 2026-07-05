@@ -6,7 +6,8 @@ Autarker E-Paper-Wetter-Monitor auf dem **Waveshare ESP32-S3-PhotoPainter**
 und eine **7-Tage-Wettervorhersage** (Open-Meteo) – batteriebetrieben mit
 Deep-Sleep.
 
-![Wetter-Icons](icons_src/cut/sun.png)
+![Tagesansicht](docs/screenshots/tagesansicht.jpg)
+![Stundenansicht](docs/screenshots/stundenansicht.jpg)
 
 ## Features
 
