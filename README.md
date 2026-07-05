@@ -53,6 +53,7 @@ PCF85063 RTC (0x51), AXP2101 PMIC (0x34). E-Paper über SPI
 
 ## Konfiguration & Flashen
 
+**`konfigurator.bat`** (Doppelklick, ohne Konsolenfenster) oder
 `python tools/configurator.py` startet das Konfigurations-Tool:
 
 - **Sensoren laden** holt alle Thermo-/Hygrometer aus der SwitchBot-Cloud
@@ -62,9 +63,9 @@ PCF85063 RTC (0x51), AXP2101 PMIC (0x34). E-Paper über SPI
   Stunden-Vorschau (4 Thermometer + 8-Stunden-Leiste) oder 6 Thermometer (2×3).
 - **Speichern** schreibt `tools/wetter_config.json` und generiert
   `include/user_config.h` + `include/secrets.h` (alle gitignored).
-- **Upload** sucht den PhotoPainter automatisch (USB-VID 303A), prüft die
-  Verbindung und flasht per PlatformIO. Nach dem Flashen das Board per
-  PWR-Taste aus- und einschalten.
+- **Upload** baut zuerst die Firmware, sucht dann den PhotoPainter frisch per
+  USB-VID 303A (die COM-Nummer wechselt bei jedem Reset!) und flasht per
+  PlatformIO. Nach dem Flashen das Board per PWR-Taste aus- und einschalten.
 
 ### Flashen-Hinweis (Akku-Falle)
 
@@ -73,18 +74,24 @@ die Deep-Sleep-Firmware kappt den USB-Port. Für einen zuverlässigen Upload in 
 **Download-Modus**: Kabel ab → **PWR** aus → **BOOT** halten → Kabel ein (BOOT
 halten) → BOOT loslassen. Danach normal booten (PWR aus/an ohne BOOT).
 
-## Wetter-Icons
+## Wetter-Icons & Fonts
 
 Die Icons in `icons_src/` werden mit `tools/gen_icons.py` (Pillow) auf die 6
 Panel-Farben quantisiert und als `src/weather_icons.h` eingebettet
 (4 Bit/Pixel-Palettenindex, pixelweise gezeichnet).
+
+Alle Schriften stammen aus `tools/gen_fonts.py`: Arial (Bold 36/18/12 pt,
+Regular 9 pt) wird als Adafruit-GFX-Font nach `src/big_fonts.h` generiert –
+Latin-1-indiziert inkl. **Gradzeichen und Umlauten**, sodass °C, Büro & Küche
+echte Glyphen sind (Vorschau: `icons_src/_fonts_preview.png`).
 
 ## Projektstruktur
 
 - `src/` – Firmware (Module: `switchbot_api`, `sb_sign`, `forecast`,
   `local_sensors`, `display_view`, `power_logic`, `view_model`, `main`).
 - `test/` – native Unity-Tests.
-- `tools/gen_icons.py` – Icon-Generator.
+- `tools/gen_icons.py` / `tools/gen_fonts.py` – Icon- und Font-Generator.
+- `konfigurator.bat` / `tools/configurator.py` – Konfigurations- & Flash-Tool.
 - `docs/superpowers/` – Design-Spec & Implementierungsplan.
 
 ## Lizenz
