@@ -1,9 +1,5 @@
 #include "display_view.h"
 #include <GxEPD2_7C.h>
-#include <Fonts/FreeSansBold24pt7b.h>
-#include <Fonts/FreeSansBold18pt7b.h>
-#include <Fonts/FreeSansBold12pt7b.h>
-#include <Fonts/FreeSans9pt7b.h>
 #include "big_fonts.h"
 #include "config.h"
 #include "view_model.h"
@@ -44,52 +40,26 @@ void displayInit() {
   display.epd2.setBusyCallback(epdBusyWait);
 }
 
-// Zeichnet "<num>°C" mit echtem Gradring (Fonts haben kein 0xB0).
-// Cursor steht nach Aufruf hinter dem "C".
-static void printTempC(int x, int baselineY, const char* numbuf,
-                       int radius, int circleDY, uint16_t color) {
+// Zeichnet "<num>°C" in Farbe; das Gradzeichen ist ein echtes Font-Glyph
+// (Latin-1 0xB0). Cursor steht nach Aufruf hinter dem "C".
+static void printTempC(int x, int baselineY, const char* numbuf, uint16_t color) {
   display.setTextColor(color);
   display.setCursor(x, baselineY);
   display.print(numbuf);
-  int cx = display.getCursorX();
-  display.fillCircle(cx + radius + 3, baselineY - circleDY, radius, color);
-  display.fillCircle(cx + radius + 3, baselineY - circleDY, radius - 2, GxEPD_WHITE);
-  display.setCursor(cx + 2 * radius + 8, baselineY);
-  display.print("C");
+  display.print("\xB0" "C");
 }
 
-// Gibt UTF-8-Text aus. Die GFX-Fonts sind reines ASCII (7b), daher werden
-// Umlaute als Basisbuchstabe mit zwei aufgemalten Punkten gezeichnet, ß als "ss".
-// Punktposition/-groesse werden aus den Glyphen-Metriken des aktuellen Fonts abgeleitet.
-static void printUtf8(const char* s, uint16_t color) {
+// Gibt UTF-8-Text aus. Die generierten Arial-Fonts sind Latin-1-indiziert
+// (inkl. Umlaute, ß, °), daher genuegt UTF-8 -> Latin-1-Byte.
+static void printUtf8(const char* s) {
   while (*s) {
     unsigned char c = (unsigned char)*s;
     if (c < 0x80) { display.write((uint8_t)c); s++; continue; }
     unsigned char c2 = (unsigned char)s[1];
     if ((c & 0xE0) != 0xC0 || (c2 & 0xC0) != 0x80) { s++; continue; }
     unsigned cp = ((c & 0x1F) << 6) | (c2 & 0x3F);
+    if (cp <= 0xFF) display.write((uint8_t)cp);   // ausserhalb Latin-1: skip
     s += 2;
-    char base;
-    switch (cp) {
-      case 0xE4: base = 'a'; break;  // ä
-      case 0xF6: base = 'o'; break;  // ö
-      case 0xFC: base = 'u'; break;  // ü
-      case 0xC4: base = 'A'; break;  // Ä
-      case 0xD6: base = 'O'; break;  // Ö
-      case 0xDC: base = 'U'; break;  // Ü
-      case 0xDF: display.print("ss"); continue;  // ß
-      default: continue;             // unbekanntes Zeichen ueberspringen
-    }
-    int x0 = display.getCursorX(), y0 = display.getCursorY();
-    char tmp[2] = {base, 0};
-    int16_t bx, by; uint16_t bw, bh;
-    display.getTextBounds(tmp, x0, y0, &bx, &by, &bw, &bh);
-    display.write((uint8_t)base);
-    int cx = bx + bw / 2;
-    int dotY = by - 4;               // knapp ueber der Glyphen-Oberkante
-    int r = bh >= 20 ? 3 : 2;
-    display.fillCircle(cx - r - 2, dotY, r, color);
-    display.fillCircle(cx + r + 2, dotY, r, color);
   }
 }
 
@@ -104,10 +74,10 @@ static void drawBattIcon(int x, int y, int pct, uint16_t color) {
 static void drawTile(int x, int y, int w, int h, const char* name, const SensorReading& r) {
   display.drawRect(x, y, w, h, GxEPD_BLACK);
   display.setTextSize(1);
-  display.setFont(&FreeSansBold12pt7b);
+  display.setFont(&ArialBold12);
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(x + 14, y + 30);
-  printUtf8(name, GxEPD_BLACK);
+  printUtf8(name);
   // Akku rechts oben: Piktogramm + Prozent (nichts, wenn unbekannt)
   if (r.valid && r.battery >= 0) {
     uint16_t bc = batteryWarn(r.battery) ? GxEPD_RED : GxEPD_BLACK;
@@ -123,19 +93,19 @@ static void drawTile(int x, int y, int w, int h, const char* name, const SensorR
   }
   char buf[16];
   if (r.valid) {
-    // Temperatur gross (36pt), Feuchte daneben (32pt, ~10% kleiner)
+    // Temperatur gross (36pt), Feuchte daneben (18pt, halbe Groesse)
     char hum[8];
     fmtTemp(r, buf, sizeof buf);
     display.setFont(&ArialBold36);
-    printTempC(x + 18, y + h - 22, buf, 7, 46, toGx(tempColor(r.temperature)));
+    printTempC(x + 18, y + h - 22, buf, toGx(tempColor(r.temperature)));
     int hx = display.getCursorX();
     fmtHum(r, hum, sizeof hum);
-    display.setFont(&ArialBold32);
+    display.setFont(&ArialBold18);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(hx + 34, y + h - 22);
     display.print(hum); display.print("%");
   } else {
-    display.setFont(&FreeSans9pt7b);
+    display.setFont(&Arial9);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(x + 18, y + (h + 10) / 2);
     display.print("-- keine Daten --");
@@ -180,37 +150,30 @@ static void drawForecastBar(int y0, const DayForecast* fc, int count) {
     int cx = i * colW + colW / 2;
     if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 128, GxEPD_BLACK);
     // Wochentag
-    display.setFont(&FreeSansBold12pt7b);
+    display.setFont(&ArialBold12);
     display.setTextColor(GxEPD_BLACK);
-    const char* wd = WDAY_DE[fc[i].wday % 7];
-    int16_t bx, by; uint16_t bw, bh;
-    display.getTextBounds(wd, 0, 0, &bx, &by, &bw, &bh);
     display.setCursor(i * colW + 8, y0 + 24);   // linksbuendig
-    display.print(wd);
-    // Icon (mittig)
-    drawWeatherIcon(cx, y0 + 68, wmoToIcon(fc[i].wmoCode));
-    // Temperaturen Max (schwarz) / Min (blau), je mit kleinem Gradring
+    display.print(WDAY_DE[fc[i].wday % 7]);
+    // Icon (mittig, leicht nach oben gerueckt)
+    drawWeatherIcon(cx, y0 + 58, wmoToIcon(fc[i].wmoCode));
+    // Temperaturen Max (schwarz) / Min (blau), zentriert
     char hs[8], ls[8], full[20];
-    snprintf(hs, sizeof hs, "%d", fc[i].tMax);
-    snprintf(ls, sizeof ls, "%d", fc[i].tMin);
-    snprintf(full, sizeof full, "%s   %s", hs, ls);  // grobe Breite fuer Zentrierung
-    display.setFont(&FreeSansBold12pt7b);
+    snprintf(hs, sizeof hs, "%d\xB0", fc[i].tMax);
+    snprintf(ls, sizeof ls, "%d\xB0", fc[i].tMin);
+    snprintf(full, sizeof full, "%s  %s", hs, ls);
+    int16_t bx, by; uint16_t bw, bh;
     display.getTextBounds(full, 0, 0, &bx, &by, &bw, &bh);
-    int tx = cx - bw / 2;
+    display.setCursor(cx - bw / 2, y0 + 128);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(tx, y0 + 128);
     display.print(hs);
-    int dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLACK);   // Gradring Max
-    display.setCursor(dx + 9, y0 + 128);
+    display.print("  ");
     display.setTextColor(GxEPD_BLUE);
     display.print(ls);
-    dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLUE);    // Gradring Min
   }
 }
 
-// Stundenleiste: pro Spalte Uhrzeit, Icon, Temperatur (Gradring), Niederschlag mm.
+// Stundenleiste: pro Spalte Uhrzeit, Icon, darunter Temperatur (Gradring)
+// und in eigener Zeile der Niederschlag in mm (mit Nachkommastelle).
 static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
   display.drawLine(0, y0, 800, y0, GxEPD_BLACK);
   int cols = count < FORECAST_HOURS ? count : FORECAST_HOURS;
@@ -218,28 +181,24 @@ static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
   int colW = 800 / cols;
   for (int i = 0; i < cols; i++) {
     int cx = i * colW + colW / 2;
-    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 128, GxEPD_BLACK);
+    if (i > 0) display.drawLine(i * colW, y0 + 6, i * colW, y0 + 130, GxEPD_BLACK);
     char hbuf[8];
     snprintf(hbuf, sizeof hbuf, "%02d:00", hf[i].hour);
-    display.setFont(&FreeSansBold12pt7b);
+    display.setFont(&ArialBold12);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(i * colW + 6, y0 + 24);
     display.print(hbuf);
-    drawWeatherIcon(cx, y0 + 68, wmoToIconDN(hf[i].wmoCode, hf[i].isDay));
-    // Temperatur links unten (Gradring wie Tagesleiste), Niederschlag blau daneben
+    drawWeatherIcon(cx, y0 + 58, wmoToIconDN(hf[i].wmoCode, hf[i].isDay));
+    // Temperatur, darunter Niederschlag blau
     char ts[8];
-    snprintf(ts, sizeof ts, "%d", hf[i].temp);
-    display.setCursor(i * colW + 6, y0 + 128);
+    snprintf(ts, sizeof ts, "%d\xB0", hf[i].temp);
+    display.setCursor(i * colW + 6, y0 + 106);
     display.print(ts);
-    int dx = display.getCursorX();
-    display.drawCircle(dx + 3, y0 + 116, 2, GxEPD_BLACK);
     char ps[12];
-    if (hf[i].precipMm >= 9.95f)      snprintf(ps, sizeof ps, "%.0f mm", hf[i].precipMm);
-    else if (hf[i].precipMm >= 0.05f) snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
-    else                              snprintf(ps, sizeof ps, "0 mm");
-    display.setFont(&FreeSans9pt7b);
+    snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
+    display.setFont(&Arial9);
     display.setTextColor(GxEPD_BLUE);
-    display.setCursor(dx + 12, y0 + 128);
+    display.setCursor(i * colW + 6, y0 + 130);
     display.print(ps);
   }
 }
@@ -254,15 +213,15 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     display.fillScreen(GxEPD_WHITE);
     // --- Header ---
     display.setTextSize(1);
-    display.setFont(&FreeSansBold18pt7b);
+    display.setFont(&ArialBold18);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(12, 40);
-    printUtf8(HEADER_TITLE, GxEPD_BLACK);
+    printUtf8(HEADER_TITLE);
     // Untertitel: Uhrzeit + eigener Akku
     char sub[48];
     snprintf(sub, sizeof sub, "%02d:%02d    Akku %d%%%s",
              hi.hour, hi.minute, hi.battPct, hi.charging ? " +" : "");
-    display.setFont(&FreeSans9pt7b);
+    display.setFont(&Arial9);
     display.setCursor(14, 68);
     display.print(sub);
     if (!hi.wifiOk) {
@@ -271,18 +230,18 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
       display.setTextColor(GxEPD_BLACK);
     }
     // Rechts: lokaler SHTC3-Wert gross
-    display.setFont(&FreeSansBold12pt7b);
+    display.setFont(&ArialBold12);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(408, 56);
     display.print("Hier");
     char tnum[12];
     snprintf(tnum, sizeof tnum, "%.1f", hi.localTemp);
     display.setFont(&ArialBold36);
-    printTempC(478, 66, tnum, 7, 46, toGx(tempColor(hi.localTemp)));
+    printTempC(478, 66, tnum, toGx(tempColor(hi.localTemp)));
     int lhx = display.getCursorX();
     char loch[8];
     snprintf(loch, sizeof loch, "%d%%", hi.localHum);
-    display.setFont(&ArialBold32);
+    display.setFont(&ArialBold18);
     display.setTextColor(GxEPD_BLACK);
     display.setCursor(lhx + 34, 66);
     display.print(loch);

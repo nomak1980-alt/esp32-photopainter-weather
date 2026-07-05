@@ -1,23 +1,28 @@
 #!/usr/bin/env python
-# Erzeugt src/big_fonts.h: Adafruit-GFX-Fonts aus Arial Bold (Windows),
-# nur die Zeichen % - . 0-9 C (Anzeige von Temperatur/Feuchte).
+# Erzeugt src/big_fonts.h: Adafruit-GFX-Fonts aus Arial Bold (Windows).
+# Zeichensatz: ASCII 0x20..0x7E plus Latin-1 ° Ä Ö Ü ß ä ö ü — damit koennen
+# Gradzeichen und Umlaute direkt als Glyphen gedruckt werden (Latin-1-Codes).
 # Punkt->Pixel wie Adafruit fontconvert: 141 dpi.
 from PIL import Image, ImageDraw, ImageFont
 
-TTF = r"C:\Windows\Fonts\arialbd.ttf"
+TTF_BOLD = r"C:\Windows\Fonts\arialbd.ttf"
+TTF_REG  = r"C:\Windows\Fonts\arial.ttf"
 OUT = "C:/Entwicklung/ESP32Wetter/src/big_fonts.h"
 PREVIEW = "C:/Entwicklung/ESP32Wetter/icons_src/_fonts_preview.png"
-CHARS = "%-.0123456789C"
-FIRST, LAST = 0x25, 0x43   # '%'..'C'
+CHARS = "".join(chr(c) for c in range(0x20, 0x7F)) + "\xB0\xC4\xD6\xDC\xDF\xE4\xF6\xFC"
+FIRST, LAST = 0x20, 0xFC   # ' '..'ü' (Latin-1)
 
-def build_font(name, pt):
+def build_font(name, pt, ttf):
     px = round(pt * 141 / 72)
-    font = ImageFont.truetype(TTF, px)
+    font = ImageFont.truetype(ttf, px)
     ascent, descent = font.getmetrics()
     glyphs = {}   # code -> (bitmap_bytes, w, h, xadv, xoff, yoff)
     for ch in CHARS:
         x0, y0, x1, y1 = font.getbbox(ch)
         w, h = x1 - x0, y1 - y0
+        if w <= 0 or h <= 0:   # Leerzeichen: keine Pixel, nur Vorschub
+            glyphs[ord(ch)] = (b"", 0, 0, round(font.getlength(ch)), 0, 0)
+            continue
         img = Image.new("L", (w, h), 0)
         ImageDraw.Draw(img).text((-x0, -y0), ch, fill=255, font=font)
         bits = bytearray()
@@ -64,26 +69,27 @@ def build_font(name, pt):
     lines.append("};")
     return lines, glyphs, ascent
 
-out = ["// Auto-generiert von tools/gen_fonts.py (Arial Bold, nur %-.0-9C).",
+out = ["// Auto-generiert von tools/gen_fonts.py (Arial Bold, ASCII + Umlaute + Grad).",
        "// NICHT von Hand editieren.", "#pragma once",
        "#include <Adafruit_GFX.h>", ""]
 previews = []
-for name, pt in (("ArialBold36", 36), ("ArialBold32", 32)):
-    lines, glyphs, ascent = build_font(name, pt)
+for name, pt, ttf in (("ArialBold36", 36, TTF_BOLD), ("ArialBold18", 18, TTF_BOLD),
+                      ("ArialBold12", 12, TTF_BOLD), ("Arial9", 9, TTF_REG)):
+    lines, glyphs, ascent = build_font(name, pt, ttf)
     out += lines + [""]
     previews.append((name, pt, glyphs, ascent))
 
 with open(OUT, "w", newline="\n") as f:
     f.write("\n".join(out) + "\n")
 
-# Vorschau: "24.5C 38%" aus den generierten Bitmaps rekonstruieren
-img = Image.new("L", (1200, 260), 255)
+# Vorschau aus den generierten Bitmaps rekonstruieren
+img = Image.new("L", (1200, 400), 255)
 ypos = 20
 for name, pt, glyphs, ascent in previews:
     x = 10
-    for ch in "24.5C 38%":
-        if ch == " ": x += 20; continue
+    for ch in "24.5\xB0C 38% B\xFCro K\xFCche":
         b, w, h, xadv, xo, yo = glyphs[ord(ch)]
+        if w == 0 or h == 0: x += xadv; continue
         gl = Image.new("L", (max(w,1), max(h,1)), 255)
         px = gl.load()
         for i in range(w * h):
