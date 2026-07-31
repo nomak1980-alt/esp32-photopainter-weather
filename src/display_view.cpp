@@ -196,7 +196,7 @@ static void drawHourlyBar(int y0, const HourForecast* hf, int count) {
     display.print(ts);
     char ps[12];
     snprintf(ps, sizeof ps, "%.1f mm", hf[i].precipMm);
-    display.setFont(&Arial9);
+    display.setFont(&ArialBold12);
     display.setTextColor(GxEPD_BLUE);
     display.setCursor(i * colW + 6, y0 + 130);
     display.print(ps);
@@ -213,15 +213,15 @@ void displayRender(const SensorReading* r, int n, const HeaderInfo& hi,
     display.fillScreen(GxEPD_WHITE);
     // --- Header ---
     display.setTextSize(1);
-    display.setFont(&ArialBold18);
+    // Zeile 1 (frueher der Titel): Aktualisierungszeit
+    display.setFont(&ArialBold12);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(12, 40);
-    printUtf8(HEADER_TITLE);
-    // Untertitel: Uhrzeit + eigener Akku
     char sub[48];
-    snprintf(sub, sizeof sub, "%02d:%02d    Akku %d%%%s",
-             hi.hour, hi.minute, hi.battPct, hi.charging ? " +" : "");
-    display.setFont(&Arial9);
+    snprintf(sub, sizeof sub, "Werte aktualisiert um: %02d:%02d", hi.hour, hi.minute);
+    display.setCursor(12, 36);
+    display.print(sub);
+    // Zeile 2: nur eigener Akku
+    snprintf(sub, sizeof sub, "Akku %d%%%s", hi.battPct, hi.charging ? " +" : "");
     display.setCursor(14, 68);
     display.print(sub);
     if (!hi.wifiOk) {
