@@ -29,6 +29,9 @@ static void epdBusyWait(const void*) {
   uint32_t t0 = millis();
   while (digitalRead(EPD_BUSY_PIN) == LOW) {
     if (millis() - t0 > 30000) break;
+    // Kein Light Sleep im BUSY-Warten: als Stromsparmassnahme am 31.07.2026
+    // eingebaut, steht aber im Verdacht, den Aufhaenger ab dem zweiten Zyklus
+    // mitzuverursachen (lief nur im Produktivbuild, nicht in env:debug).
     delay(10);
   }
 }

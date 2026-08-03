@@ -37,3 +37,27 @@
 #ifndef HEADER_TITLE
 #define HEADER_TITLE "SwitchBot Wetter"
 #endif
+
+// =====================================================================
+//  Energie-Stellschrauben (Akkulaufzeit)
+// =====================================================================
+// Wettervorhersage nur alle N Sekunden neu holen; dazwischen bleibt der
+// Stand aus dem RTC-RAM stehen (spart pro Zyklus einen TLS-Handshake).
+#ifndef FORECAST_INTERVAL_S
+#define FORECAST_INTERVAL_S 1800
+#endif
+// Spaetestens nach N Minuten auch ohne Messwertaenderung neu zeichnen,
+// damit "Werte aktualisiert um ..." nicht veraltet. 0 = aus.
+#ifndef FORCE_REDRAW_MIN
+#define FORCE_REDRAW_MIN 60
+#endif
+// Bitmaske der ALDO-Schienen, die vor dem Deep Sleep abgeschaltet werden.
+//   Bit0=ALDO1, Bit1=ALDO2, Bit2=ALDO3, Bit3=ALDO4   (0 = nichts abschalten)
+// STAND 31.07.2026: bewusst 0. Mit 0b1110 hing das Geraet ab dem zweiten
+// Zyklus dauerhaft wach, der komplette I2C-Bus (SHTC3/AXP2101/PCF85063) war
+// tot -- offenbar haengt daran mehr als gedacht (Pullups? RTC?). Vor einer
+// erneuten Aktivierung Bit fuer Bit mit env:debug testen (30 s Zyklus,
+// Serial an) und pruefen, ob nach dem Aufwachen "rtcReset=1" erscheint.
+#ifndef SLEEP_OFF_ALDOS
+#define SLEEP_OFF_ALDOS 0
+#endif
