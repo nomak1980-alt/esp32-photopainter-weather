@@ -31,6 +31,12 @@ static String sbNonce() {
 
 int fetchAll(const char* const* ids, SensorReading* readings, int n) {
   int ok = 0;
+  // Alle Geraete liegen hinter demselben Host: eine TLS-Verbindung offen halten
+  // spart pro weiterem Geraet einen kompletten Handshake (~1 s Wachzeit).
+  WiFiClientSecure cli;
+  cli.setInsecure();
+  HTTPClient http;
+  http.setReuse(true);
   for (int i = 0; i < n; i++) {
     strncpy(readings[i].id, ids[i], sizeof(readings[i].id) - 1);
     readings[i].id[sizeof(readings[i].id) - 1] = 0;
@@ -38,9 +44,6 @@ int fetchAll(const char* const* ids, SensorReading* readings, int n) {
     String t  = String((uint64_t)time(nullptr) * 1000ULL);
     String nc = sbNonce();
     String sign = String(sbSign(SB_TOKEN, SB_SECRET, t.c_str(), nc.c_str()).c_str());
-    WiFiClientSecure cli;
-    cli.setInsecure();
-    HTTPClient http;
     String url = String("https://api.switch-bot.com/v1.1/devices/") + ids[i] + "/status";
     if (!http.begin(cli, url)) continue;
     http.addHeader("Authorization", SB_TOKEN);
@@ -57,6 +60,7 @@ int fetchAll(const char* const* ids, SensorReading* readings, int n) {
     }
     http.end();
   }
+  cli.stop();   // Verbindung erst nach dem letzten Geraet wirklich schliessen
   return ok;
 }
 #endif

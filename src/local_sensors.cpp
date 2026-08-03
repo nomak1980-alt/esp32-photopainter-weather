@@ -11,7 +11,8 @@ static XPowersPMU pmu;
 
 void localInit() {
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-  shtc3.begin(&Wire);
+  // Erst den PMIC: die Schienen koennen aus dem Deep Sleep abgeschaltet sein,
+  // daher vor allen anderen I2C-Teilnehmern wieder einschalten.
   pmu.begin(Wire, PMIC_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN);
   // Versorgungsschienen wie Werksfirmware aktivieren (E-Paper haengt an einer ALDO).
   pmu.setALDO1Voltage(3300); pmu.enableALDO1();
@@ -19,6 +20,17 @@ void localInit() {
   pmu.setALDO3Voltage(3300); pmu.enableALDO3();
   pmu.setALDO4Voltage(3300); pmu.enableALDO4();
   delay(50);
+  shtc3.begin(&Wire);
+}
+
+// Schaltet die per SLEEP_OFF_ALDOS markierten Schienen ab. Das E-Paper haelt
+// sein Bild stromlos, die Audio-Codecs werden nie gebraucht -- nur die Schiene
+// der PCF85063-RTC muss anbleiben (siehe Hinweis in config.h).
+void localSleepPrepare() {
+  if (SLEEP_OFF_ALDOS & 0b0001) pmu.disableALDO1();
+  if (SLEEP_OFF_ALDOS & 0b0010) pmu.disableALDO2();
+  if (SLEEP_OFF_ALDOS & 0b0100) pmu.disableALDO3();
+  if (SLEEP_OFF_ALDOS & 0b1000) pmu.disableALDO4();
 }
 
 bool readSHTC3(float& t, int& h) {
@@ -39,6 +51,10 @@ bool readBattery(int& pct, bool& chg) {
 static uint8_t bcd2dec(uint8_t b) { return (b >> 4) * 10 + (b & 0x0F); }
 static uint8_t dec2bcd(uint8_t d) { return ((d / 10) << 4) | (d % 10); }
 
+static bool s_rtcLostPower = false;   // OS-Flag der letzten Leseoperation
+
+bool rtcLostPower() { return s_rtcLostPower; }
+
 bool rtcNow(struct tm& o) {
   Wire.beginTransmission(PCF85063_I2C_ADDR);
   Wire.write(0x04);
@@ -46,6 +62,10 @@ bool rtcNow(struct tm& o) {
   if (Wire.requestFrom(PCF85063_I2C_ADDR, 7) != 7) return false;
   uint8_t s = Wire.read(), mi = Wire.read(), hh = Wire.read(),
           dd = Wire.read(), wd = Wire.read(), mo = Wire.read(), yr = Wire.read();
+  // Bit 7 des Sekundenregisters = OS: Oszillator stand -> Zeit ist Muell
+  // (passiert, wenn die Schiene der RTC im Schlaf abgeschaltet wurde).
+  s_rtcLostPower = (s & 0x80) != 0;
+  if (s_rtcLostPower) return false;
   o.tm_sec  = bcd2dec(s & 0x7F);
   o.tm_min  = bcd2dec(mi & 0x7F);
   o.tm_hour = bcd2dec(hh & 0x3F);

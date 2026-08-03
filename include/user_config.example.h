@@ -18,4 +18,3 @@ static const bool DEVICE_OUTDOOR[DEVICE_COUNT] = {true,true,false,false};
 // 0 = 4 Thermometer + Tages-Vorschau, 1 = 4 Thermometer + Stunden-Vorschau,
 // 2 = 6 Thermometer (2x3) ohne Wetterleiste
 #define DISPLAY_MODE 0
-#define HEADER_TITLE "SwitchBot Wetter"

@@ -1,6 +1,6 @@
 #pragma once
 
-enum WIcon { ICON_SUN, ICON_PARTLY, ICON_CLOUD, ICON_RAIN, ICON_SNOW, ICON_STORM };
+enum WIcon { ICON_SUN, ICON_PARTLY, ICON_CLOUD, ICON_RAIN, ICON_SNOW, ICON_STORM, ICON_MOON, ICON_MOON_PARTLY, ICON_FOG };
 
 struct DayForecast {
   int  wmoCode;   // Open-Meteo WMO weather code
@@ -15,11 +15,15 @@ struct HourForecast {
   int   wmoCode;   // Open-Meteo WMO weather code
   int   temp;      // gerundet °C
   float precipMm;  // Niederschlag mm in dieser Stunde
+  bool  isDay;     // Tag (1) oder Nacht (0) lt. API
   bool  valid;
 };
 
 // WMO-Wettercode -> Icon-Kategorie
 WIcon wmoToIcon(int code);
+
+// WMO-Wettercode -> Icon-Kategorie mit Tag/Nacht-Variante
+WIcon wmoToIconDN(int code, bool isDay);
 
 // Wochentag (0=So..6=Sa) aus Datum, Sakamoto-Algorithmus
 int weekdayFromDate(int y, int m, int d);

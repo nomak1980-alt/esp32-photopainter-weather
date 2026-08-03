@@ -6,7 +6,6 @@ import config_store as cs
 
 def make_cfg():
     return {
-        "header_title": "Wetter Büro",
         "display_mode": 1,
         "wifi_ssid": "MeinWLAN",
         "wifi_pass": 'pass"wort\\x',
@@ -43,7 +42,7 @@ class TestConfigStore(unittest.TestCase):
             self.assertEqual(cs.load(json_path=jp), cfg)
             text = uc.read_text(encoding="utf-8")
             self.assertIn('#define DISPLAY_MODE 1', text)
-            self.assertIn('#define HEADER_TITLE "Wetter Büro"', text)
+            self.assertNotIn('HEADER_TITLE', text)   # Ueberschrift gibt es nicht mehr
             self.assertIn('#define DEVICE_COUNT 2', text)   # nur selektierte
             self.assertIn('{"AAAA","BBBB"}', text.replace("\n  ", ""))
             self.assertIn('{"Büro","Garten"}', text.replace("\n  ", ""))
@@ -77,7 +76,6 @@ class TestConfigStore(unittest.TestCase):
             self.assertEqual(cfg["wifi_ssid"], "W")
             self.assertEqual(cfg["lat"], "48.1")
             self.assertEqual(cfg["display_mode"], 0)          # Default
-            self.assertEqual(cfg["header_title"], "SwitchBot Wetter")  # Default
             self.assertEqual(len(cfg["devices"]), 2)
             self.assertEqual(cfg["devices"][1],
                              {"id": "X2", "name": "Küche", "outdoor": True, "selected": True})
@@ -96,7 +94,7 @@ class TestConfigStore(unittest.TestCase):
             jp = Path(td) / "cfg.json"
             # JSON without "devices" key — should not share list with DEFAULTS
             jp.write_text(
-                '{"header_title": "Test", "display_mode": 1, "wifi_ssid": "W"}',
+                '{"display_mode": 1, "wifi_ssid": "W"}',
                 encoding="utf-8")
             cfg = cs.load(json_path=jp,
                           user_config_path=Path(td) / "y.h",

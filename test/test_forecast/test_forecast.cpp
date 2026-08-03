@@ -5,7 +5,8 @@ void test_wmo_to_icon() {
   TEST_ASSERT_EQUAL(ICON_SUN,    wmoToIcon(0));
   TEST_ASSERT_EQUAL(ICON_PARTLY, wmoToIcon(2));
   TEST_ASSERT_EQUAL(ICON_CLOUD,  wmoToIcon(3));
-  TEST_ASSERT_EQUAL(ICON_CLOUD,  wmoToIcon(45));
+  TEST_ASSERT_EQUAL(ICON_FOG,    wmoToIcon(45));
+  TEST_ASSERT_EQUAL(ICON_FOG,    wmoToIcon(48));
   TEST_ASSERT_EQUAL(ICON_RAIN,   wmoToIcon(61));
   TEST_ASSERT_EQUAL(ICON_RAIN,   wmoToIcon(80));
   TEST_ASSERT_EQUAL(ICON_SNOW,   wmoToIcon(75));
@@ -62,4 +63,35 @@ void test_parse_hourly_bad() {
   HourForecast h[8]; int count = -1;
   TEST_ASSERT_FALSE(parseHourlyJson("{\"foo\":1}", h, 8, &count));
   TEST_ASSERT_EQUAL_INT(0, count);
+}
+
+void test_wmo_to_icon_night() {
+  TEST_ASSERT_EQUAL(ICON_MOON,         wmoToIconDN(0, false));
+  TEST_ASSERT_EQUAL(ICON_MOON,         wmoToIconDN(1, false));
+  TEST_ASSERT_EQUAL(ICON_MOON_PARTLY,  wmoToIconDN(2, false));
+  TEST_ASSERT_EQUAL(ICON_SUN,          wmoToIconDN(0, true));
+  TEST_ASSERT_EQUAL(ICON_PARTLY,       wmoToIconDN(2, true));
+  TEST_ASSERT_EQUAL(ICON_RAIN,         wmoToIconDN(61, false));  // Regen bleibt Regen
+  TEST_ASSERT_EQUAL(ICON_FOG,          wmoToIconDN(45, false));
+}
+
+void test_parse_hourly_is_day() {
+  const char* body = R"({"hourly":{"time":["2026-07-04T21:00","2026-07-04T22:00"],
+    "weather_code":[0,2],"temperature_2m":[19.0,18.2],
+    "precipitation":[0.0,0.0],"is_day":[0,0]}})";
+  HourForecast h[8];
+  int count = 0;
+  TEST_ASSERT_TRUE(parseHourlyJson(body, h, 8, &count));
+  TEST_ASSERT_FALSE(h[0].isDay);
+  TEST_ASSERT_EQUAL(ICON_MOON, wmoToIconDN(h[0].wmoCode, h[0].isDay));
+  TEST_ASSERT_EQUAL(ICON_MOON_PARTLY, wmoToIconDN(h[1].wmoCode, h[1].isDay));
+}
+
+void test_parse_hourly_is_day_missing_defaults_day() {
+  const char* body = R"({"hourly":{"time":["2026-07-04T14:00"],
+    "weather_code":[0],"temperature_2m":[27.0],"precipitation":[0.0]}})";
+  HourForecast h[8];
+  int count = 0;
+  TEST_ASSERT_TRUE(parseHourlyJson(body, h, 8, &count));
+  TEST_ASSERT_TRUE(h[0].isDay);
 }
