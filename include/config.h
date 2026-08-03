@@ -34,9 +34,6 @@
 #ifndef DISPLAY_MODE
 #define DISPLAY_MODE 0
 #endif
-#ifndef HEADER_TITLE
-#define HEADER_TITLE "SwitchBot Wetter"
-#endif
 
 // =====================================================================
 //  Energie-Stellschrauben (Akkulaufzeit)

@@ -31,13 +31,10 @@ class App:
         gen = ttk.LabelFrame(main, text="Anzeige", padding=8)
         gen.grid(sticky="ew", pady=(0, 8))
         gen.columnconfigure(1, weight=1)
-        ttk.Label(gen, text="Überschrift:").grid(row=0, column=0, sticky="w")
-        self.v_title = tk.StringVar(value=self.cfg["header_title"])
-        ttk.Entry(gen, textvariable=self.v_title).grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Label(gen, text="Modus:").grid(row=1, column=0, sticky="w")
+        ttk.Label(gen, text="Modus:").grid(row=0, column=0, sticky="w")
         self.v_mode = tk.IntVar(value=self.cfg["display_mode"])
         modefrm = ttk.Frame(gen)
-        modefrm.grid(row=1, column=1, sticky="w", padx=6)
+        modefrm.grid(row=0, column=1, sticky="w", padx=6)
         for i, name in enumerate(cs.MODE_NAMES):
             ttk.Radiobutton(modefrm, text=name, value=i, variable=self.v_mode,
                             command=self.on_mode_change).pack(side="left", padx=(0, 10))
@@ -212,7 +209,6 @@ class App:
         if sel > cs.device_limit(mode):
             raise ValueError(f"Maximal {cs.device_limit(mode)} Thermometer in diesem Modus.")
         self.cfg.update(
-            header_title=self.v_title.get().strip() or "SwitchBot Wetter",
             display_mode=mode,
             wifi_ssid=self.v_ssid.get().strip(), wifi_pass=self.v_pass.get(),
             sb_token=self.v_token.get().strip(), sb_secret=self.v_secret.get().strip(),

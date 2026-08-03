@@ -16,7 +16,6 @@ SECRETS_H = ROOT / "include" / "secrets.h"
 MODE_NAMES = ["Tages-Vorschau", "Stunden-Vorschau", "6 Thermometer"]
 
 DEFAULTS = {
-    "header_title": "SwitchBot Wetter",
     "display_mode": 0,
     "wifi_ssid": "",
     "wifi_pass": "",
@@ -73,7 +72,6 @@ def _parse_headers(user_config_path, secrets_path):
         cfg["lat"] = d.get("FORECAST_LAT", cfg["lat"])
         cfg["lon"] = d.get("FORECAST_LON", cfg["lon"])
         cfg["tz"] = d.get("FORECAST_TZ", cfg["tz"])
-        cfg["header_title"] = _unescape(d.get("HEADER_TITLE", cfg["header_title"]))
         m = re.search(r"#define\s+DISPLAY_MODE\s+(\d)", text)
         if m:
             cfg["display_mode"] = int(m.group(1))
@@ -125,7 +123,6 @@ def _gen_user_config(cfg):
         f'#define FORECAST_LON  {_c_str(cfg["lon"])}\n'
         f'#define FORECAST_TZ   {_c_str(cfg["tz"])}\n\n'
         f'#define DISPLAY_MODE {cfg["display_mode"]}\n'
-        f'#define HEADER_TITLE {_c_str(cfg["header_title"])}\n'
     )
 
 
